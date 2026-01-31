@@ -23,7 +23,7 @@
     "serviceSite": {
       "type": "string",
       "label": "ServiceSite",
-      "default": "PMC"
+      "default": "PlanetMinecraft.com"
     },
     "voteURL": {
       "type": "string",
