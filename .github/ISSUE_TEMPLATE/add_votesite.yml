@@ -1,0 +1,105 @@
+name: "Add VoteSite preset"
+description: "Request a new VoteSite preset (auto-generates a PR)."
+title: "VoteSite preset: <domain>"
+labels: ["preset-request", "votesite"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This will generate a PR in **VotingPlugin-Presets**.
+
+        **Required:** Domain + ServiceSite + Site Key + Display Name.
+        **Optional:** Vote delay settings (blank means omitted in YAML).
+  - type: input
+    id: domain
+    attributes:
+      label: Domain (no protocol)
+      description: Example: planetminecraft.com
+      placeholder: planetminecraft.com
+    validations:
+      required: true
+  - type: input
+    id: domains_extra
+    attributes:
+      label: Extra domains (comma separated)
+      description: Example: www.planetminecraft.com, m.planetminecraft.com
+      placeholder: www.planetminecraft.com
+    validations:
+      required: false
+  - type: input
+    id: preset_id
+    attributes:
+      label: Preset ID
+      description: Must start with "votesite:"
+      placeholder: votesite:pmc
+    validations:
+      required: true
+  - type: input
+    id: site_key
+    attributes:
+      label: VoteSite key (siteKey)
+      description: Example: PMC
+      placeholder: PMC
+    validations:
+      required: true
+  - type: input
+    id: display_name
+    attributes:
+      label: Display name (displayName)
+      description: Example: PlanetMinecraft
+      placeholder: PlanetMinecraft
+    validations:
+      required: true
+  - type: input
+    id: service_site
+    attributes:
+      label: ServiceSite (required)
+      description: Must match VotingPlugin ServiceSite identifier for this site.
+      placeholder: PlanetMinecraft.com
+    validations:
+      required: true
+  - type: input
+    id: vote_url_default
+    attributes:
+      label: Default VoteURL placeholder
+      description: Suggestion: ADD_VOTE_URL_LATER
+      placeholder: ADD_VOTE_URL_LATER
+    validations:
+      required: true
+
+  - type: header
+    attributes:
+      label: Vote delay defaults (optional)
+
+  - type: input
+    id: vote_delay
+    attributes:
+      label: VoteDelay (optional)
+      description: Example: 24h, 12h. Leave blank to omit the VoteDelay line.
+      placeholder: 24h
+    validations:
+      required: false
+  - type: input
+    id: wait_until_vote_delay
+    attributes:
+      label: WaitUntilVoteDelay (optional)
+      description: true/false. Leave blank to omit the line.
+      placeholder: false
+    validations:
+      required: false
+  - type: input
+    id: vote_delay_daily
+    attributes:
+      label: VoteDelayDaily (optional)
+      description: true/false. Leave blank to omit the line.
+      placeholder: false
+    validations:
+      required: false
+  - type: input
+    id: vote_delay_daily_hour
+    attributes:
+      label: VoteDelayDailyHour (optional)
+      description: 0-23. Leave blank to omit the line.
+      placeholder: 0
+    validations:
+      required: false
