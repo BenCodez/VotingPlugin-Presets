@@ -1,231 +1,629 @@
-#!/usr/bin/env node
-/**
- * @fileoverview Builds /index.json by scanning preset *.meta.json files.
- *
- * - Contributors add presets by adding new *.meta.json (+ YAML fragments).
- * - Nobody edits index.json by hand.
- * - Output is stable, sorted, and easy to diff.
- *
- * Usage:
- *   node tools/build-index.mjs
- */
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VotingPlugin Presets</title>
 
-import fs from "node:fs";
-import path from "node:path";
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 18px; }
+    header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    input, select, button, textarea { padding: 8px 10px; font-size: 14px; }
+    textarea { resize: vertical; }
+    button { cursor: pointer; }
+    .muted { color:#666; }
+    .error { color:#b00020; }
+    .layout { display:grid; grid-template-columns: 1.1fr 1fr; gap:14px; margin-top:14px; }
+    .card { border:1px solid #e6e6e6; border-radius:12px; padding:12px; background:#fff; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid #ddd; border-radius:999px; font-size:12px; }
+    code { background:#f5f5f5; padding:2px 6px; border-radius:6px; }
+    pre { background:#0b1020; color:#d6e1ff; padding:12px; border-radius:10px; overflow:auto; max-height:520px; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { border-bottom:1px solid #eee; padding:8px; text-align:left; vertical-align:top; }
+    th { background:#fafafa; position: sticky; top: 0; }
+    .split { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    .list { max-height:420px; overflow:auto; }
+    label { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+  </style>
+</head>
 
-/**
- * @param {string} p
- * @returns {boolean}
- */
-function exists(p) {
-  try {
-    fs.accessSync(p, fs.constants.F_OK);
-    return true;
-  } catch {
-    return false;
-  }
+<body>
+
+<header>
+  <h2 style="margin:0;">VotingPlugin Presets</h2>
+
+  <label class="small">
+    <span class="muted">Registry base URL</span>
+    <input id="baseUrl" size="48" />
+  </label>
+
+  <button id="reloadBtn">Reload</button>
+  <span id="status" class="muted"></span>
+</header>
+
+<div class="row" style="margin-top:10px;">
+  <input id="q" size="34" placeholder="Search presets..." />
+  <select id="cat">
+    <option value="">All</option>
+    <option value="votesites">VoteSites</option>
+    <option value="rewards">Rewards</option>
+    <option value="milestones">VoteMilestones</option>
+  </select>
+  <span class="muted" id="count"></span>
+</div>
+
+<div id="msg" class="error" style="margin-top:10px;"></div>
+
+<div class="layout">
+
+  <!-- LEFT -->
+  <div class="card">
+    <div class="pill">Presets</div>
+    <div class="list" style="margin-top:8px;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:30%;">ID</th>
+            <th style="width:18%;">Category</th>
+            <th>Name</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="card">
+    <div class="row" style="justify-content:space-between;">
+      <div>
+        <div class="pill">Merged YAML</div>
+        <div id="selTitle" class="muted" style="margin-top:4px;">None</div>
+      </div>
+      <button id="copyBtn" disabled>Copy</button>
+    </div>
+
+    <hr style="border:none;border-top:1px solid #eee;margin:10px 0;" />
+
+    <div class="split">
+      <div>
+        <div class="pill">Placeholders</div>
+        <div id="placeholderForm" style="margin-top:8px;"></div>
+      </div>
+
+      <div>
+        <div class="pill">Add reward examples</div>
+        <div class="muted" style="font-size:12px; margin-top:6px;">
+          These merge into <code>VoteSites.&lt;siteKey&gt;.Rewards</code>
+        </div>
+        <select id="addonRewards" multiple size="8" style="width:100%; margin-top:8px;"></select>
+      </div>
+    </div>
+
+    <pre id="mergedOut" style="margin-top:10px;">Select a VoteSite preset.</pre>
+  </div>
+
+</div>
+
+<script>
+/* ---------------- helpers ---------------- */
+
+function normalizeBaseUrl(url) {
+  let u = (url || "").trim();
+  if (!u.endsWith("/")) u += "/";
+  return u;
 }
 
-/**
- * @param {string} filePath
- * @returns {any}
- */
-function readJson(filePath) {
-  const raw = fs.readFileSync(filePath, "utf8");
-  return JSON.parse(raw);
+function norm(s) { return String(s || "").toLowerCase().trim(); }
+
+function toYamlListBlock(multiline, indentSpaces) {
+  const pad = " ".repeat(indentSpaces);
+  const lines = String(multiline || "")
+    .split(/\r?\n/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
+  if (!lines.length) return pad + "- \"\"";
+  return lines.map(l => `${pad}- "${l.replaceAll('"', '\\"')}"`).join("\n");
 }
 
-/**
- * Recursively finds files matching a predicate.
- *
- * @param {string} dir
- * @param {(name: string) => boolean} match
- * @param {string[]} out
- * @returns {string[]}
- */
-function findFiles(dir, match, out = []) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const ent of entries) {
-    const full = path.join(dir, ent.name);
-    if (ent.isDirectory()) {
-      findFiles(full, match, out);
-    } else if (ent.isFile() && match(ent.name)) {
-      out.push(full);
-    }
+function applyPlaceholders(text, values) {
+  let out = text;
+  for (const [k, v] of Object.entries(values)) {
+    out = out.split(`<${k}>`).join(String(v));
   }
   return out;
 }
 
 /**
- * Normalizes domains:
- * - lowercases
- * - strips leading www.
+ * Very small YAML-ish parser for our use-case:
+ * - fragments are "children blocks" (objects/lists/scalars)
+ * - we only need to merge them into an object tree and then print YAML
  *
- * @param {string[]} domains
- * @returns {string[]}
- */
-function normalizeDomains(domains) {
-  if (!Array.isArray(domains)) return [];
-  return domains
-    .filter((d) => typeof d === "string" && d.trim().length > 0)
-    .map((d) => d.trim().toLowerCase())
-    .map((d) => (d.startsWith("www.") ? d.substring(4) : d))
-    .filter((d, i, a) => a.indexOf(d) === i)
-    .sort();
-}
-
-/**
- * @param {string[]} keywords
- * @returns {string[]}
- */
-function normalizeKeywords(keywords) {
-  if (!Array.isArray(keywords)) return [];
-  return keywords
-    .filter((k) => typeof k === "string" && k.trim().length > 0)
-    .map((k) => k.trim().toLowerCase())
-    .filter((k, i, a) => a.indexOf(k) === i)
-    .sort();
-}
-
-/**
- * Deduces category based on folder names.
+ * This supports:
+ * - key: value
+ * - key:
+ *     child...
+ * - lists:
+ *     - "item"
  *
- * @param {string} metaPath
- * @returns {string}
+ * It's intentionally minimal but works for our preset fragments.
  */
-function inferCategory(metaPath) {
-  const p = metaPath.replaceAll("\\", "/");
-  // NOTE: no leading slash here (your meta paths are like "presets/votesites/pmc.meta.json")
-  if (p.includes("presets/votesites/")) return "votesites";
-  if (p.includes("presets/rewards/")) return "rewards";
-  if (p.includes("presets/milestones/")) return "milestones";
-  if (p.includes("bundles/")) return "bundles";
-  return "other";
+
+/** @returns {boolean} */
+function isQuoted(s) {
+  return (s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"));
+}
+
+/** @returns {string} */
+function unquote(s) {
+  if (isQuoted(s)) return s.slice(1, -1);
+  return s;
 }
 
 /**
- * @param {any} meta
- * @param {string} relMetaPath
+ * Parses a YAML fragment into a JS object representing that fragment.
+ * Minimal: handles maps + string/number/bool + list of strings.
+ *
+ * @param {string} yaml
  * @returns {any}
  */
-function toIndexEntry(meta, relMetaPath) {
-  const id = meta?.id;
-  const name = meta?.display?.name;
+function parseFragmentYaml(yaml) {
+  const lines = String(yaml || "").replace(/\t/g, "  ").split(/\r?\n/);
+  // Remove empty lines at ends
+  while (lines.length && lines[0].trim() === "") lines.shift();
+  while (lines.length && lines[lines.length - 1].trim() === "") lines.pop();
 
-  if (typeof id !== "string" || id.trim() === "") {
-    throw new Error(`Missing/invalid meta.id in ${relMetaPath}`);
-  }
-  if (typeof name !== "string" || name.trim() === "") {
-    throw new Error(`Missing/invalid display.name in ${relMetaPath}`);
-  }
+  // Stack of { indent, node, type } where type is "map" or "list"
+  const root = {};
+  const stack = [{ indent: -1, node: root, type: "map" }];
 
-  const description =
-    typeof meta?.display?.description === "string" ? meta.display.description : "";
+  function current() { return stack[stack.length - 1]; }
 
-  const domains = normalizeDomains(meta?.match?.domains);
-  const keywords = normalizeKeywords(meta?.match?.keywords);
-
-  const updatedAt =
-    typeof meta?.updatedAt === "string" && meta.updatedAt.trim() !== ""
-      ? meta.updatedAt
-      : null;
-
-  const verified = meta?.verified === true;
-
-  return {
-    id,
-    category: inferCategory(relMetaPath),
-    name,
-    description,
-    keywords,
-    domains,
-    metaPath: relMetaPath.replaceAll("\\", "/"),
-    updatedAt,
-    verified
-  };
-}
-
-/**
- * @param {any[]} entries
- * @returns {any[]}
- */
-function sortEntries(entries) {
-  return entries.sort((a, b) => {
-    const c = (a.category || "").localeCompare(b.category || "");
-    if (c !== 0) return c;
-    return (a.id || "").localeCompare(b.id || "");
-  });
-}
-
-(function main() {
-  const repoRoot = process.cwd();
-  const presetsDir = path.join(repoRoot, "presets");
-  const bundlesDir = path.join(repoRoot, "bundles");
-
-  if (!exists(presetsDir) && !exists(bundlesDir)) {
-    console.error("No presets/ or bundles/ folder found. Run from repo root.");
-    process.exit(1);
+  function parseScalar(raw) {
+    const s = raw.trim();
+    if (s === "true") return true;
+    if (s === "false") return false;
+    if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
+    // keep quotes content as string; otherwise string
+    return unquote(s);
   }
 
-  /** @type {string[]} */
-  const metaFiles = [];
+  for (let i = 0; i < lines.length; i++) {
+    const lineRaw = lines[i];
+    if (!lineRaw.trim() || lineRaw.trim().startsWith("#")) continue;
 
-  if (exists(presetsDir)) {
-    metaFiles.push(...findFiles(presetsDir, (n) => n.endsWith(".meta.json")));
-  }
-  if (exists(bundlesDir)) {
-    metaFiles.push(...findFiles(bundlesDir, (n) => n.endsWith(".bundle.json")));
-  }
+    const indent = lineRaw.match(/^ */)[0].length;
+    const line = lineRaw.trim();
 
-  /** @type {any[]} */
-  const entries = [];
-  const seenIds = new Set();
+    // Pop stack until parent indent < current indent
+    while (stack.length > 1 && indent <= current().indent) stack.pop();
 
-  for (const absMeta of metaFiles) {
-    const rel = path.relative(repoRoot, absMeta);
-    const meta = readJson(absMeta);
+    const ctx = current();
 
-    // Bundle indexing (optional support)
-    if (absMeta.endsWith(".bundle.json")) {
-      const id = meta?.id;
-      const name = meta?.display?.name;
-      if (typeof id !== "string" || typeof name !== "string") {
-        throw new Error(`Bundle missing id/display.name: ${rel}`);
+    // List item
+    if (line.startsWith("- ")) {
+      if (ctx.type !== "list") {
+        // Convert last inserted key to list if needed (should already be list)
+        // but if not, create list anyway at this level isn't valid for our fragments
+        // We'll treat it as root list if needed.
+        const list = [];
+        if (ctx.type === "map") {
+          // Root list not expected; just attach to a special key
+          ctx.node.__list__ = list;
+        }
+        stack.push({ indent, node: list, type: "list" });
       }
-
-      const entry = {
-        id,
-        category: "bundles",
-        name,
-        description: typeof meta?.display?.description === "string" ? meta.display.description : "",
-        keywords: normalizeKeywords(meta?.keywords),
-        domains: [],
-        metaPath: rel.replaceAll("\\", "/"),
-        updatedAt: typeof meta?.updatedAt === "string" ? meta.updatedAt : null,
-        verified: meta?.verified === true
-      };
-
-      if (seenIds.has(entry.id)) throw new Error(`Duplicate id: ${entry.id}`);
-      seenIds.add(entry.id);
-      entries.push(entry);
+      const listCtx = current();
+      const item = line.substring(2);
+      listCtx.node.push(parseScalar(item));
       continue;
     }
 
-    const entry = toIndexEntry(meta, rel);
-    if (seenIds.has(entry.id)) {
-      throw new Error(`Duplicate id: ${entry.id}`);
+    // Map key/value
+    const idx = line.indexOf(":");
+    if (idx === -1) continue;
+
+    const key = line.substring(0, idx).trim();
+    const rest = line.substring(idx + 1).trim();
+
+    if (ctx.type !== "map") {
+      // If current is list, can't place map entries directly; ignore
+      continue;
     }
-    seenIds.add(entry.id);
-    entries.push(entry);
+
+    if (rest === "") {
+      // key: (start map or list later)
+      // Peek next non-empty line to see if it's a list
+      let j = i + 1;
+      let nextLine = null;
+      while (j < lines.length) {
+        const t = lines[j].trim();
+        if (t && !t.startsWith("#")) { nextLine = lines[j]; break; }
+        j++;
+      }
+      const nextIsList = nextLine != null && nextLine.trim().startsWith("- ");
+      const child = nextIsList ? [] : {};
+      ctx.node[key] = child;
+      stack.push({ indent, node: child, type: nextIsList ? "list" : "map" });
+    } else {
+      ctx.node[key] = parseScalar(rest);
+    }
   }
 
-  const index = {
-    schemaVersion: 1,
-    generatedAt: new Date().toISOString(),
-    entries: sortEntries(entries)
-  };
+  // If root had __list__, return that list; otherwise root map
+  if (Object.prototype.hasOwnProperty.call(root, "__list__")) return root.__list__;
+  return root;
+}
 
-  const outPath = path.join(repoRoot, "index.json");
-  fs.writeFileSync(outPath, JSON.stringify(index, null, 2) + "\n", "utf8");
-  console.log(`Wrote ${outPath} (${index.entries.length} entries)`);
+/**
+ * Deep merge:
+ * - objects merge recursively
+ * - arrays concatenate
+ * - scalars overwrite
+ *
+ * @param {any} target
+ * @param {any} source
+ * @returns {any}
+ */
+function deepMerge(target, source) {
+  if (Array.isArray(target) && Array.isArray(source)) {
+    return target.concat(source);
+  }
+  if (target && typeof target === "object" && !Array.isArray(target)
+      && source && typeof source === "object" && !Array.isArray(source)) {
+    for (const [k, v] of Object.entries(source)) {
+      if (Object.prototype.hasOwnProperty.call(target, k)) {
+        target[k] = deepMerge(target[k], v);
+      } else {
+        target[k] = v;
+      }
+    }
+    return target;
+  }
+  return source;
+}
+
+/**
+ * Merge a fragment object into a root object using a dot-path.
+ * For now we only use this for VoteSites paths, but it's generic.
+ *
+ * @param {object} rootObj
+ * @param {string} pathStr dot path like "VoteSites.PMC.Rewards"
+ * @param {any} fragmentObj
+ */
+function mergeIntoPath(rootObj, pathStr, fragmentObj) {
+  const parts = pathStr.split(".").filter(p => p.length > 0);
+  if (!parts.length) return;
+
+  let cur = rootObj;
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    const last = i === parts.length - 1;
+
+    if (last) {
+      if (cur[p] == null) {
+        cur[p] = fragmentObj;
+      } else {
+        cur[p] = deepMerge(cur[p], fragmentObj);
+      }
+    } else {
+      if (cur[p] == null || typeof cur[p] !== "object") cur[p] = {};
+      cur = cur[p];
+    }
+  }
+}
+
+/**
+ * Render JS object tree to YAML (minimal, but good for our merged output).
+ *
+ * @param {any} obj
+ * @param {number} indent
+ * @returns {string}
+ */
+function renderYaml(obj, indent = 0) {
+  const pad = " ".repeat(indent);
+
+  if (Array.isArray(obj)) {
+    return obj.map(v => {
+      if (typeof v === "string") return `${pad}- "${v.replaceAll('"', '\\"')}"`;
+      return `${pad}- ${String(v)}`;
+    }).join("\n");
+  }
+
+  if (obj && typeof obj === "object") {
+    const keys = Object.keys(obj);
+    return keys.map(k => {
+      const v = obj[k];
+      if (v && typeof v === "object") {
+        const child = renderYaml(v, indent + 2);
+        return `${pad}${k}:\n${child}`;
+      }
+      if (typeof v === "string") return `${pad}${k}: "${v.replaceAll('"', '\\"')}"`;
+      return `${pad}${k}: ${String(v)}`;
+    }).join("\n");
+  }
+
+  // scalar
+  if (typeof obj === "string") return `${pad}"${obj.replaceAll('"', '\\"')}"`;
+  return `${pad}${String(obj)}`;
+}
+
+/* ---------------- state ---------------- */
+
+let indexData = null;
+let selected = null;
+let selectedMeta = null;
+let rewardEntries = [];
+let placeholderValues = {};
+
+const elBase = document.getElementById("baseUrl");
+const elRows = document.getElementById("rows");
+const elMerged = document.getElementById("mergedOut");
+const elCopy = document.getElementById("copyBtn");
+const elSelTitle = document.getElementById("selTitle");
+const elForm = document.getElementById("placeholderForm");
+const elAddRewards = document.getElementById("addonRewards");
+const elQ = document.getElementById("q");
+const elCat = document.getElementById("cat");
+const elCount = document.getElementById("count");
+const elMsg = document.getElementById("msg");
+const elStatus = document.getElementById("status");
+
+/* ---------------- init base URL ---------------- */
+
+(function initBase() {
+  // Works for repo pages: https://host/repo/index.html -> https://host/repo/
+  elBase.value = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, "/");
 })();
+
+/* ---------------- load index ---------------- */
+
+async function loadIndex() {
+  elMsg.textContent = "";
+  elStatus.textContent = "Loading...";
+  elMerged.textContent = "Loading...";
+  elCopy.disabled = true;
+  elSelTitle.textContent = "None";
+
+  const base = normalizeBaseUrl(elBase.value);
+
+  try {
+    const idx = await fetch(base + "index.json", { cache: "no-store" }).then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status} for ${base}index.json`);
+      return r.json();
+    });
+
+    indexData = (idx.entries || []);
+    rewardEntries = indexData.filter(e => e.category === "rewards");
+
+    renderIndex();
+    elStatus.textContent = `Loaded ${indexData.length} presets`;
+    elMerged.textContent = "Select a VoteSite preset.";
+  } catch (e) {
+    elStatus.textContent = "";
+    elMsg.textContent = e.message || String(e);
+    elMerged.textContent = "Failed to load index.";
+  }
+}
+
+function filteredEntries() {
+  const q = norm(elQ.value);
+  const c = norm(elCat.value);
+
+  let list = indexData || [];
+  if (c) list = list.filter(e => norm(e.category) === c);
+
+  if (q) {
+    list = list.filter(e => {
+      const hay = [
+        e.id, e.category, e.name, e.description,
+        ...(e.keywords || []),
+        ...(e.domains || [])
+      ].map(norm).join(" ");
+      return hay.includes(q);
+    });
+  }
+  elCount.textContent = `${list.length} shown / ${(indexData || []).length} total`;
+  return list;
+}
+
+function renderIndex() {
+  const list = filteredEntries();
+
+  elRows.innerHTML = list.map(e => `
+    <tr data-id="${e.id}">
+      <td><code>${e.id}</code></td>
+      <td>${e.category}</td>
+      <td>${e.name}</td>
+    </tr>
+  `).join("");
+
+  elRows.querySelectorAll("tr").forEach(tr => {
+    tr.onclick = () => selectPreset(tr.dataset.id);
+  });
+}
+
+/* ---------------- selection ---------------- */
+
+async function fetchJson(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+  return await r.json();
+}
+
+async function fetchText(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+  return await r.text();
+}
+
+async function loadFragments(meta) {
+  const base = normalizeBaseUrl(elBase.value);
+  const out = [];
+  const frags = Array.isArray(meta.fragments) ? meta.fragments : [];
+  for (const f of frags) {
+    if (!f.path || !f.mergeInto) continue;
+    const text = await fetchText(base + f.path);
+    out.push({ mergeInto: f.mergeInto, text });
+  }
+  return out;
+}
+
+async function selectPreset(id) {
+  const base = normalizeBaseUrl(elBase.value);
+
+  selected = (indexData || []).find(e => e.id === id);
+  if (!selected) return;
+
+  // We only want VoteSites selected here (your UI intent right now)
+  if (selected.category !== "votesites") {
+    elMerged.textContent = "Please select a VoteSites preset.";
+    return;
+  }
+
+  elSelTitle.textContent = `${selected.name} (${selected.id})`;
+  elMerged.textContent = "Loading preset...";
+  elCopy.disabled = true;
+
+  try {
+    selectedMeta = await fetchJson(base + selected.metaPath);
+    placeholderValues = {};
+
+    buildPlaceholderForm();
+    buildAddonRewards();
+
+    await rebuild();
+  } catch (e) {
+    elMerged.textContent = "Failed to load preset: " + (e.message || String(e));
+  }
+}
+
+function buildPlaceholderForm() {
+  const ph = selectedMeta.placeholders || {};
+  elForm.innerHTML = "";
+
+  for (const [k, spec] of Object.entries(ph)) {
+    const isMultiline = (k === "commands" || k === "messages");
+    const el = document.createElement(isMultiline ? "textarea" : "input");
+
+    el.value = spec.default ?? "";
+    if (isMultiline) el.rows = 4;
+
+    el.oninput = () => {
+      placeholderValues[k] = el.value;
+      rebuild();
+    };
+
+    placeholderValues[k] = el.value;
+
+    const wrap = document.createElement("label");
+    wrap.innerHTML = `<strong>${spec.label || k}</strong>`;
+    wrap.appendChild(el);
+    elForm.appendChild(wrap);
+  }
+}
+
+function buildAddonRewards() {
+  elAddRewards.innerHTML = rewardEntries.map(e =>
+    `<option value="${e.id}">${e.name}</option>`
+  ).join("");
+
+  elAddRewards.onchange = rebuild;
+}
+
+/* ---------------- merge build ---------------- */
+
+async function rebuild() {
+  if (!selectedMeta) return;
+
+  elMerged.textContent = "Building merged YAML...";
+  elCopy.disabled = true;
+
+  const base = normalizeBaseUrl(elBase.value);
+
+  // Build derived placeholder blocks.
+  // IMPORTANT: indent = 0 here because we parse+render later,
+  // but we still need list items to be properly nested under Commands/Messages in fragment YAML.
+  // We'll generate with 2 spaces so that within the fragment:
+  // Commands:
+  //   - "..."
+  // and then merging + rendering keeps correct indentation.
+  const derived = { ...placeholderValues };
+  if (derived.commands != null) derived.commandsBlock = toYamlListBlock(derived.commands, 2);
+  if (derived.messages != null) derived.messagesBlock = toYamlListBlock(derived.messages, 2);
+
+  // We will merge into an object tree, using mergeInto paths.
+  const tree = {};
+
+  try {
+    // 1) main VoteSite preset fragments
+    const mainFrags = await loadFragments(selectedMeta);
+
+    // 2) reward add-ons (inline rewards expected)
+    const rewardFrags = [];
+    for (const opt of elAddRewards.selectedOptions) {
+      const entry = rewardEntries.find(r => r.id === opt.value);
+      if (!entry) continue;
+      const meta = await fetchJson(base + entry.metaPath);
+      rewardFrags.push(...await loadFragments(meta));
+    }
+
+    const all = [...mainFrags, ...rewardFrags];
+
+    // Replace placeholders in BOTH mergeInto and fragment text, then parse and merge.
+    for (const f of all) {
+      const mergeIntoFilled = applyPlaceholders(f.mergeInto, derived).trim();
+
+      // For now we only implement VoteSites path merging.
+      // This makes adding VoteMilestones later trivial: allow that root too.
+      if (!mergeIntoFilled.startsWith("VoteSites")) {
+        continue;
+      }
+
+      const fragmentYamlFilled = applyPlaceholders(f.text, derived).trim();
+      const fragmentObj = parseFragmentYaml(fragmentYamlFilled);
+
+      mergeIntoPath(tree, mergeIntoFilled, fragmentObj);
+    }
+
+    // Render final YAML for VoteSites only (for now).
+    const out = renderYaml(tree, 0);
+    elMerged.textContent = out ? (out.trimEnd() + "\n") : "Nothing to output.";
+    elCopy.disabled = false;
+
+  } catch (e) {
+    elMerged.textContent = "Failed to build YAML: " + (e.message || String(e));
+  }
+}
+
+/* ---------------- events ---------------- */
+
+document.getElementById("reloadBtn").onclick = loadIndex;
+elQ.addEventListener("input", renderIndex);
+elCat.addEventListener("change", renderIndex);
+
+elCopy.onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(elMerged.textContent);
+    elCopy.textContent = "Copied!";
+    setTimeout(() => elCopy.textContent = "Copy", 900);
+  } catch {
+    // fallback
+    const ta = document.createElement("textarea");
+    ta.value = elMerged.textContent;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    elCopy.textContent = "Copied!";
+    setTimeout(() => elCopy.textContent = "Copy", 900);
+  }
+};
+
+loadIndex();
+</script>
+
+</body>
+</html>
