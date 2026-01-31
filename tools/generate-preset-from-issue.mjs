@@ -221,8 +221,6 @@ function main() {
     writeFile(ymlPath, yml);
   }
 
-  // Rebuild index.json
-  execSync("node tools/build-index.mjs", { stdio: "inherit" });
 }
 
 main();
