@@ -30,19 +30,43 @@ jobs:
         with:
           node-version: "20"
 
+      # Build the registry index (NOT committed)
       - name: Build index.json
         run: node tools/build-index.mjs
 
-      # Put generated index.json into the published site root
-      - name: Copy index.json into docs/
+      # Assemble the GitHub Pages site
+      - name: Assemble site files
         run: |
           mkdir -p docs
+
+          # Prevent Jekyll processing
+          touch docs/.nojekyll
+
+          # Publish the generated index.json at site root
           cp index.json docs/index.json
+
+          # Publish presets so the UI can fetch meta + YAML
+          if [ -d "presets" ]; then
+            rm -rf docs/presets
+            cp -R presets docs/presets
+          fi
+
+          # Publish bundles (optional)
+          if [ -d "bundles" ]; then
+            rm -rf docs/bundles
+            cp -R bundles docs/bundles
+          fi
+
+          # Ensure index.html exists
+          if [ ! -f "docs/index.html" ]; then
+            echo "ERROR: docs/index.html not found"
+            exit 1
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload Pages artifact (docs)
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs
