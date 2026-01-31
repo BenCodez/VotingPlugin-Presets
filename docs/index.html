@@ -85,26 +85,29 @@
     <div class="split">
       <div>
         <div class="pill">VoteSite placeholders</div>
-        <div class="hint">Vote delay options are optional: leave blank to omit the YAML line.</div>
+        <div class="hint">Vote delay options are optional.</div>
         <div id="votesiteForm" style="margin-top:8px;"></div>
       </div>
 
       <div>
         <div class="pill">Reward add-ons</div>
-        <div class="hint">Rewards merge into <code>VoteSites.&lt;siteKey&gt;.Rewards</code></div>
+        <div class="hint">Merged into <code>VoteSites.&lt;siteKey&gt;.Rewards</code></div>
 
         <select id="addonRewards" multiple size="7" style="width:100%; margin-top:8px;"></select>
 
         <div class="pill" style="margin-top:12px;">Reward placeholders</div>
-        <div class="hint">Each selected reward has its own placeholders.</div>
         <div id="rewardForms"></div>
       </div>
     </div>
 
+    <div id="yamlStatus" class="error" style="margin-top:10px; display:none;"></div>
     <pre id="mergedOut" style="margin-top:10px;">Select a VoteSite preset.</pre>
   </div>
 
 </div>
+
+<!-- YAML parser -->
+<script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
 
 <script>
 /* ---------------- helpers ---------------- */
@@ -115,18 +118,60 @@ async function fetchJson(url) {
   if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
   return r.json();
 }
-
 async function fetchText(url) {
   const r = await fetch(url, { cache: "no-store" });
   if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
   return r.text();
 }
 
+/* ---------------- yaml validation ---------------- */
+const elYamlStatus = document.getElementById("yamlStatus");
+
+function clearYamlError() {
+  elYamlStatus.textContent = "";
+  elYamlStatus.style.display = "none";
+}
+function showYamlError(msg) {
+  elYamlStatus.textContent = msg;
+  elYamlStatus.style.display = "block";
+}
+function shouldValidateYaml(text) {
+  const s = String(text || "").trim();
+  return s && (s.includes(":") || s.startsWith("- "));
+}
+function validateYamlText(text) {
+  if (!window.jsyaml || !window.jsyaml.load) return true;
+
+  const s = String(text || "").trim();
+  if (!shouldValidateYaml(s)) {
+    clearYamlError();
+    return true;
+  }
+
+  try {
+    window.jsyaml.load(s);
+    clearYamlError();
+    return true;
+  } catch (err) {
+    const line = err?.mark?.line;
+    const col = err?.mark?.column;
+    const loc =
+      Number.isInteger(line) && Number.isInteger(col)
+        ? ` (line ${line + 1}, col ${col + 1})`
+        : "";
+    showYamlError(`Invalid YAML${loc}: ${err.message || String(err)}`);
+    return false;
+  }
+}
+
 /* ---------------- state ---------------- */
 let indexData = [];
 let rewardEntries = [];
-let selectedVoteSiteEntry = null;
 let selectedVoteSiteMeta = null;
+
+let voteSiteValues = {};
+let rewardMetasById = {};
+let rewardValuesById = {};
 
 const elRows = document.getElementById("rows");
 const elMerged = document.getElementById("mergedOut");
@@ -143,8 +188,8 @@ const elStatus = document.getElementById("status");
 
 /* ---------------- load index ---------------- */
 async function loadIndex() {
-  elMsg.textContent = "";
   elStatus.textContent = "Loading...";
+  elMsg.textContent = "";
   elMerged.textContent = "Loading...";
   elCopy.disabled = true;
 
@@ -152,14 +197,13 @@ async function loadIndex() {
     const idx = await fetchJson("index.json");
     indexData = idx.entries || [];
     rewardEntries = indexData.filter(e => e.category === "rewards");
-
     renderIndex();
     elStatus.textContent = `Loaded ${indexData.length} presets`;
     elMerged.textContent = "Select a VoteSite preset.";
+    clearYamlError();
   } catch (e) {
     elStatus.textContent = "";
     elMsg.textContent = e.message || String(e);
-    elMerged.textContent = "Failed to load index.";
   }
 }
 
@@ -169,16 +213,11 @@ function filteredEntries() {
 
   let list = indexData.slice();
   if (c) list = list.filter(e => norm(e.category) === c);
-
   if (q) {
-    list = list.filter(e => {
-      const hay = [
-        e.id, e.category, e.name, e.description,
-        ...(e.keywords || []),
-        ...(e.domains || [])
-      ].map(norm).join(" ");
-      return hay.includes(q);
-    });
+    list = list.filter(e =>
+      [e.id, e.name, e.category, ...(e.keywords || [])]
+        .map(norm).join(" ").includes(q)
+    );
   }
 
   elCount.textContent = `${list.length} shown / ${indexData.length} total`;
@@ -195,38 +234,134 @@ function renderIndex() {
     </tr>
   `).join("");
 
-  elRows.querySelectorAll("tr").forEach(tr => {
-    tr.onclick = () => selectPreset(tr.dataset.id);
-  });
+  elRows.querySelectorAll("tr").forEach(tr =>
+    tr.onclick = () => selectPreset(tr.dataset.id)
+  );
 }
 
 /* ---------------- selection ---------------- */
 async function selectPreset(id) {
   const entry = indexData.find(e => e.id === id);
-  if (!entry) return;
+  if (!entry || entry.category !== "votesites") return;
 
-  if (entry.category !== "votesites") {
-    elMerged.textContent = "Please select a VoteSites preset (rewards are add-ons).";
-    return;
-  }
-
-  selectedVoteSiteEntry = entry;
   elSelTitle.textContent = `${entry.name} (${entry.id})`;
   elMerged.textContent = "Loading VoteSite preset...";
   elCopy.disabled = true;
 
+  rewardMetasById = {};
+  rewardValuesById = {};
+  elRewardForms.innerHTML = "";
+
+  elAddRewards.innerHTML = rewardEntries.map(r =>
+    `<option value="${r.id}">${r.name}</option>`
+  ).join("");
+  elAddRewards.onchange = onRewardsChanged;
+
+  selectedVoteSiteMeta = await fetchJson(entry.metaPath);
+  buildVoteSiteForm();
+  await rebuild();
+}
+
+function buildVoteSiteForm() {
+  voteSiteValues = {};
+  elVoteSiteForm.innerHTML = "";
+
+  const ph = selectedVoteSiteMeta.placeholders || {};
+  for (const [k, spec] of Object.entries(ph)) {
+    const el = document.createElement("input");
+    el.value = spec.default ?? "";
+    voteSiteValues[k] = el.value;
+
+    el.oninput = () => {
+      voteSiteValues[k] = el.value;
+      rebuild();
+    };
+
+    const wrap = document.createElement("label");
+    wrap.innerHTML = `<strong>${spec.label || k}</strong>`;
+    wrap.appendChild(el);
+    elVoteSiteForm.appendChild(wrap);
+  }
+}
+
+async function onRewardsChanged() {
+  elRewardForms.innerHTML = "";
+
+  for (const opt of elAddRewards.selectedOptions) {
+    const id = opt.value;
+    const entry = rewardEntries.find(r => r.id === id);
+    if (!entry) continue;
+
+    if (!rewardMetasById[id]) {
+      rewardMetasById[id] = await fetchJson(entry.metaPath);
+    }
+
+    if (!rewardValuesById[id]) {
+      rewardValuesById[id] = {};
+      for (const [k, spec] of Object.entries(rewardMetasById[id].placeholders || {})) {
+        rewardValuesById[id][k] = spec.default ?? "";
+      }
+    }
+
+    renderRewardForm(id, entry.name, rewardMetasById[id]);
+  }
+
+  await rebuild();
+}
+
+function renderRewardForm(id, name, meta) {
+  const div = document.createElement("div");
+  div.className = "subcard";
+  div.innerHTML = `<strong>${name}</strong>`;
+
+  for (const [k, spec] of Object.entries(meta.placeholders || {})) {
+    const el = document.createElement("input");
+    el.value = rewardValuesById[id][k];
+
+    el.oninput = () => {
+      rewardValuesById[id][k] = el.value;
+      rebuild();
+    };
+
+    const wrap = document.createElement("label");
+    wrap.innerHTML = `<strong>${spec.label || k}</strong>`;
+    wrap.appendChild(el);
+    div.appendChild(wrap);
+  }
+
+  elRewardForms.appendChild(div);
+}
+
+/* ---------------- rebuild ---------------- */
+async function rebuild() {
+  if (!selectedVoteSiteMeta) return;
+
+  elMerged.textContent = "Building merged YAML...";
+  elCopy.disabled = true;
+
   try {
-    selectedVoteSiteMeta = await fetchJson(entry.metaPath);
-    elMerged.textContent = "VoteSite loaded. Select options.";
+    const out = "# YAML output generated here\n";
+    elMerged.textContent = out;
+
+    let valid = true;
+    try {
+      valid = validateYamlText(out);
+    } catch {
+      valid = true;
+      clearYamlError();
+    }
+
+    elCopy.disabled = !valid;
   } catch (e) {
-    elMerged.textContent = "Failed to load preset: " + (e.message || String(e));
+    showYamlError("Failed to build YAML");
+    elCopy.disabled = true;
   }
 }
 
 /* ---------------- events ---------------- */
 document.getElementById("reloadBtn").onclick = loadIndex;
-elQ.addEventListener("input", renderIndex);
-elCat.addEventListener("change", renderIndex);
+elQ.oninput = renderIndex;
+elCat.onchange = renderIndex;
 
 elCopy.onclick = async () => {
   await navigator.clipboard.writeText(elMerged.textContent);
