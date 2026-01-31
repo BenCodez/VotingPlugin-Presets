@@ -104,6 +104,23 @@ function inferCategory(metaPath) {
 }
 
 /**
+ * Extracts VotingPlugin ServiceSite identifier.
+ *
+ * Your confirmed meta shape:
+ *   placeholders.serviceSite.default
+ *
+ * @param {any} meta
+ * @returns {string|null}
+ */
+function extractServiceSite(meta) {
+  const value = meta?.placeholders?.serviceSite?.default;
+  if (typeof value === "string" && value.trim() !== "") {
+    return value.trim();
+  }
+  return null;
+}
+
+/**
  * @param {any} meta
  * @param {string} relMetaPath
  * @returns {any}
@@ -111,6 +128,7 @@ function inferCategory(metaPath) {
 function toIndexEntry(meta, relMetaPath) {
   const id = meta?.id;
   const name = meta?.display?.name;
+
   if (typeof id !== "string" || id.trim() === "") {
     throw new Error(`Missing/invalid meta.id in ${relMetaPath}`);
   }
@@ -119,7 +137,9 @@ function toIndexEntry(meta, relMetaPath) {
   }
 
   const description =
-    typeof meta?.display?.description === "string" ? meta.display.description : "";
+    typeof meta?.display?.description === "string"
+      ? meta.display.description
+      : "";
 
   const domains = normalizeDomains(meta?.match?.domains);
   const keywords = normalizeKeywords(meta?.match?.keywords);
@@ -130,14 +150,19 @@ function toIndexEntry(meta, relMetaPath) {
       : null;
 
   const verified = meta?.verified === true;
+  const category = inferCategory(relMetaPath);
+
+  const serviceSite =
+    category === "votesites" ? extractServiceSite(meta) : null;
 
   return {
     id,
-    category: inferCategory(relMetaPath),
+    category,
     name,
     description,
     keywords,
     domains,
+    serviceSite,
     metaPath: relMetaPath.replaceAll("\\", "/"),
     updatedAt,
     verified,
@@ -150,7 +175,6 @@ function toIndexEntry(meta, relMetaPath) {
  */
 function sortEntries(entries) {
   return entries.sort((a, b) => {
-    // category, then id
     const c = (a.category || "").localeCompare(b.category || "");
     if (c !== 0) return c;
     return (a.id || "").localeCompare(b.id || "");
@@ -169,6 +193,7 @@ function sortEntries(entries) {
 
   /** @type {string[]} */
   const metaFiles = [];
+
   if (exists(presetsDir)) {
     metaFiles.push(...findFiles(presetsDir, (n) => n.endsWith(".meta.json")));
   }
@@ -184,35 +209,47 @@ function sortEntries(entries) {
     const rel = path.relative(repoRoot, absMeta);
     const meta = readJson(absMeta);
 
-    // Bundle files can be indexed too, but they might not have the same shape.
-    // If you want bundles indexed, give them display.name and id like meta.
+    // Bundle support
     if (absMeta.endsWith(".bundle.json")) {
       const id = meta?.id;
       const name = meta?.display?.name;
+
       if (typeof id !== "string" || typeof name !== "string") {
         throw new Error(`Bundle missing id/display.name: ${rel}`);
       }
+
       const entry = {
         id,
         category: "bundles",
         name,
-        description: typeof meta?.display?.description === "string" ? meta.display.description : "",
+        description:
+          typeof meta?.display?.description === "string"
+            ? meta.display.description
+            : "",
         keywords: normalizeKeywords(meta?.keywords),
         domains: [],
+        serviceSite: null,
         metaPath: rel.replaceAll("\\", "/"),
-        updatedAt: typeof meta?.updatedAt === "string" ? meta.updatedAt : null,
+        updatedAt:
+          typeof meta?.updatedAt === "string" ? meta.updatedAt : null,
         verified: meta?.verified === true,
       };
-      if (seenIds.has(entry.id)) throw new Error(`Duplicate id: ${entry.id}`);
+
+      if (seenIds.has(entry.id)) {
+        throw new Error(`Duplicate id: ${entry.id}`);
+      }
+
       seenIds.add(entry.id);
       entries.push(entry);
       continue;
     }
 
     const entry = toIndexEntry(meta, rel);
+
     if (seenIds.has(entry.id)) {
       throw new Error(`Duplicate id: ${entry.id}`);
     }
+
     seenIds.add(entry.id);
     entries.push(entry);
   }
@@ -225,5 +262,6 @@ function sortEntries(entries) {
 
   const outPath = path.join(repoRoot, "index.json");
   fs.writeFileSync(outPath, JSON.stringify(index, null, 2) + "\n", "utf8");
+
   console.log(`Wrote ${outPath} (${index.entries.length} entries)`);
 })();

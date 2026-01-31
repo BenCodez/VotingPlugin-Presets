@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "id": "votemilestone:stepped-range",
+  "type": "votemilestone_structured",
+  "display": {
+    "name": "Range + step milestones (At list)",
+    "description": "Runs on expanded ranges like 10..100 step 10 and 250..500 step 50."
+  },
+  "match": {
+    "keywords": [
+      "votemilestone",
+      "milestone",
+      "range",
+      "step",
+      "at"
+    ]
+  },
+  "placeholders": {
+    "milestoneId": {
+      "type": "string",
+      "label": "Milestone ID",
+      "default": "SteppedMilestones"
+    },
+    "enabled": {
+      "type": "string",
+      "label": "Enabled (true/false)",
+      "default": "true"
+    },
+    "total": {
+      "type": "string",
+      "label": "Total (ALLTIME_VOTES, DAILY_VOTES, POINTS, ...)",
+      "default": "ALLTIME_VOTES"
+    },
+    "triggerType": {
+      "type": "string",
+      "label": "Trigger type (AT or EVERY)",
+      "default": "AT"
+    },
+    "atList": {
+      "type": "string",
+      "label": "At list (one per line, used if AT)",
+      "default": "10..100 step 10\n250..500 step 50"
+    },
+    "every": {
+      "type": "string",
+      "label": "Every (number, used if EVERY)",
+      "default": "10"
+    },
+    "group": {
+      "type": "string",
+      "label": "Group (optional)",
+      "default": ""
+    },
+    "limitType": {
+      "type": "string",
+      "label": "Limit type (NONE, COOLDOWN, WINDOW_DAY, WINDOW_WEEK, WINDOW_MONTH, WINDOW_YEAR)",
+      "default": "NONE"
+    },
+    "limitDuration": {
+      "type": "string",
+      "label": "Limit duration (only for COOLDOWN)",
+      "default": "12h"
+    }
+  },
+  "verified": false
+}

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 2,
+  "id": "votemilestone:monthly-50",
+  "type": "votemilestone_structured",
+  "display": {
+    "name": "Monthly milestone (At 50, monthly)",
+    "description": "Runs when monthly votes reach 50."
+  },
+  "match": {
+    "keywords": [
+      "votemilestone",
+      "milestone",
+      "monthly",
+      "at"
+    ]
+  },
+  "placeholders": {
+    "milestoneId": {
+      "type": "string",
+      "label": "Milestone ID",
+      "default": "Monthly50"
+    },
+    "enabled": {
+      "type": "string",
+      "label": "Enabled (true/false)",
+      "default": "true"
+    },
+    "total": {
+      "type": "string",
+      "label": "Total (ALLTIME_VOTES, DAILY_VOTES, POINTS, ...)",
+      "default": "MONTHLY_VOTES"
+    },
+    "triggerType": {
+      "type": "string",
+      "label": "Trigger type (AT or EVERY)",
+      "default": "AT"
+    },
+    "atList": {
+      "type": "string",
+      "label": "At list (one per line, used if AT)",
+      "default": "50"
+    },
+    "every": {
+      "type": "string",
+      "label": "Every (number, used if EVERY)",
+      "default": "10"
+    },
+    "group": {
+      "type": "string",
+      "label": "Group (optional)",
+      "default": ""
+    },
+    "limitType": {
+      "type": "string",
+      "label": "Limit type (NONE, COOLDOWN, WINDOW_DAY, WINDOW_WEEK, WINDOW_MONTH, WINDOW_YEAR)",
+      "default": "NONE"
+    },
+    "limitDuration": {
+      "type": "string",
+      "label": "Limit duration (only for COOLDOWN)",
+      "default": "12h"
+    }
+  },
+  "verified": false
+}

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "id": "votemilestone:cooldown-bonus",
+  "type": "votemilestone_structured",
+  "display": {
+    "name": "Cooldown milestone (Every, COOLDOWN limit)",
+    "description": "Runs every N votes, but limited by a cooldown duration."
+  },
+  "match": {
+    "keywords": [
+      "votemilestone",
+      "milestone",
+      "cooldown",
+      "every",
+      "limit"
+    ]
+  },
+  "placeholders": {
+    "milestoneId": {
+      "type": "string",
+      "label": "Milestone ID",
+      "default": "VoteBonusCooldown"
+    },
+    "enabled": {
+      "type": "string",
+      "label": "Enabled (true/false)",
+      "default": "true"
+    },
+    "total": {
+      "type": "string",
+      "label": "Total (ALLTIME_VOTES, DAILY_VOTES, POINTS, ...)",
+      "default": "ALLTIME_VOTES"
+    },
+    "triggerType": {
+      "type": "string",
+      "label": "Trigger type (AT or EVERY)",
+      "default": "EVERY"
+    },
+    "atList": {
+      "type": "string",
+      "label": "At list (one per line, used if AT)",
+      "default": "1"
+    },
+    "every": {
+      "type": "string",
+      "label": "Every (number, used if EVERY)",
+      "default": "50"
+    },
+    "group": {
+      "type": "string",
+      "label": "Group (optional)",
+      "default": ""
+    },
+    "limitType": {
+      "type": "string",
+      "label": "Limit type (NONE, COOLDOWN, WINDOW_DAY, WINDOW_WEEK, WINDOW_MONTH, WINDOW_YEAR)",
+      "default": "COOLDOWN"
+    },
+    "limitDuration": {
+      "type": "string",
+      "label": "Limit duration (only for COOLDOWN)",
+      "default": "12h"
+    }
+  },
+  "verified": false
+}

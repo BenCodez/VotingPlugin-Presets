@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "votemilestoneoption:groups-default",
+  "display": {
+    "name": "VoteMilestones group options",
+    "description": "Configures VoteMilestonesOptions.Groups group modes."
+  },
+  "match": {
+    "keywords": [
+      "votemilestone",
+      "options",
+      "groups",
+      "groupmode"
+    ]
+  },
+  "placeholders": {
+    "groupName": {
+      "type": "string",
+      "label": "Group name",
+      "default": "Default"
+    },
+    "mode": {
+      "type": "string",
+      "label": "Mode (ALL, FIRST, HIGHEST)",
+      "default": "ALL"
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/votemilestones/generic.optionblock.yml",
+      "mergeInto": "VoteMilestonesOptions.Groups"
+    }
+  ],
+  "verified": false
+}

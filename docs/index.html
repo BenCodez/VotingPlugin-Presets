@@ -4,39 +4,35 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>VotingPlugin Presets</title>
-
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 18px; }
     header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
     input, select, button, textarea { padding: 8px 10px; font-size: 14px; }
-    textarea { resize: vertical; }
+    textarea { resize: vertical; width: 100%; min-height: 58px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
     button { cursor: pointer; }
     .muted { color:#666; }
-    .error { color:#b00020; }
+    .error { color:#b00020; white-space:pre-wrap; }
     .layout { display:grid; grid-template-columns: 1.1fr 1fr; gap:14px; margin-top:14px; }
     .card { border:1px solid #e6e6e6; border-radius:12px; padding:12px; background:#fff; }
     .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .pill { display:inline-block; padding:2px 8px; border:1px solid #ddd; border-radius:999px; font-size:12px; }
-    code { background:#f5f5f5; padding:2px 6px; border-radius:6px; }
-    pre { background:#0b1020; color:#d6e1ff; padding:12px; border-radius:10px; overflow:auto; max-height:520px; }
+    pre { background:#0b1020; color:#d6e1ff; padding:12px; border-radius:10px; overflow:auto; max-height:520px; white-space:pre; }
     table { width:100%; border-collapse: collapse; }
     th, td { border-bottom:1px solid #eee; padding:8px; text-align:left; vertical-align:top; }
     th { background:#fafafa; position: sticky; top: 0; }
     .split { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
     .list { max-height:420px; overflow:auto; }
     label { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
-    .subcard { border:1px solid #eee; border-radius:10px; padding:10px; background:#fcfcfc; margin-top:10px; }
     .hint { font-size:12px; color:#666; margin-top:4px; }
+    .small { font-size:12px; }
   </style>
 </head>
-
 <body>
 
 <header>
   <h2 style="margin:0;">VotingPlugin Presets</h2>
-
+  <button id="pickFolderBtn" onclick="onPickFolderClick(event)">Pick Folder</button>
   <button id="reloadBtn">Reload</button>
-  <button id="pickFolderBtn" style="display:none;">Pick Folder</button>
   <span id="status" class="muted"></span>
 </header>
 
@@ -46,7 +42,7 @@
     <option value="">All</option>
     <option value="votesites">VoteSites</option>
     <option value="rewards">Rewards</option>
-    <option value="milestones">VoteMilestones</option>
+    <option value="votemilestones">VoteMilestones</option>
     <option value="bundles">Bundles</option>
   </select>
   <span class="muted" id="count"></span>
@@ -56,14 +52,13 @@
 
 <div class="layout">
 
-  <!-- LEFT -->
   <div class="card">
     <div class="pill">Presets</div>
     <div class="list" style="margin-top:8px;">
       <table>
         <thead>
           <tr>
-            <th style="width:30%;">ID</th>
+            <th style="width:32%;">ID</th>
             <th style="width:18%;">Category</th>
             <th>Name</th>
           </tr>
@@ -73,12 +68,11 @@
     </div>
   </div>
 
-  <!-- RIGHT -->
   <div class="card">
     <div class="row" style="justify-content:space-between;">
       <div>
         <div class="pill">Merged YAML</div>
-        <div id="selTitle" class="muted" style="margin-top:4px;">None</div>
+        <div id="selTitle" class="muted small" style="margin-top:4px;">None</div>
       </div>
       <button id="copyBtn" disabled>Copy</button>
     </div>
@@ -87,27 +81,19 @@
 
     <div class="split">
       <div>
-        <div class="pill">VoteSite placeholders</div>
-        <div class="hint">Vote delay options are optional: leave blank to omit the YAML line.</div>
-        <div id="votesiteForm" style="margin-top:8px;"></div>
+        <div class="pill">Preset placeholders</div>
+        <div id="baseForm" style="margin-top:8px;"></div>
       </div>
 
       <div>
         <div class="pill">Reward add-ons</div>
-        <div class="hint">Rewards merge into <code>VoteSites.&lt;siteKey&gt;.Rewards</code></div>
-
+        <div class="hint" id="rewardHint">Pick a base preset first.</div>
         <select id="addonRewards" multiple size="7" style="width:100%; margin-top:8px;"></select>
-
-        <div class="pill" style="margin-top:12px;">Reward placeholders</div>
-        <div class="hint">Each selected reward has its own placeholders.</div>
         <div id="rewardForms"></div>
       </div>
     </div>
 
-    <!-- silent unless invalid -->
-    <div id="yamlStatus" class="error" style="margin-top:10px; display:none;"></div>
-
-    <pre id="mergedOut" style="margin-top:10px;">Select a VoteSite preset.</pre>
+    <pre id="mergedOut" style="margin-top:10px;">Pick a folder, then select a preset.</pre>
   </div>
 
 </div>
@@ -115,795 +101,604 @@
 <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
 
 <script>
-/* =====================================================
-   MODE DETECTION (HTTP vs file://)
-   ===================================================== */
-const isFileMode = location.protocol === "file:";
-let rootDirHandle = null;
+/**
+ * Global root directory handle for local mode.
+ * Kept on window so it survives if code reloads.
+ */
+window.rootDirHandle = window.rootDirHandle || null;
 
-/* =====================================================
-   DOM
-   ===================================================== */
+/** @type {FileSystemDirectoryHandle|null} */
+let rootDirHandle = window.rootDirHandle || null;
+
+const isFileMode = location.protocol === "file:";
+
 const elRows = document.getElementById("rows");
 const elMerged = document.getElementById("mergedOut");
 const elCopy = document.getElementById("copyBtn");
 const elSelTitle = document.getElementById("selTitle");
-const elVoteSiteForm = document.getElementById("votesiteForm");
-const elRewardForms = document.getElementById("rewardForms");
+const elForm = document.getElementById("baseForm");
 const elAddRewards = document.getElementById("addonRewards");
-const elQ = document.getElementById("q");
-const elCat = document.getElementById("cat");
-const elCount = document.getElementById("count");
+const elRewardForms = document.getElementById("rewardForms");
 const elMsg = document.getElementById("msg");
 const elStatus = document.getElementById("status");
-const elYamlStatus = document.getElementById("yamlStatus");
-const elPickFolderBtn = document.getElementById("pickFolderBtn");
+const elCount = document.getElementById("count");
+const elQ = document.getElementById("q");
+const elCat = document.getElementById("cat");
+const elRewardHint = document.getElementById("rewardHint");
 
-/* =====================================================
-   YAML VALIDATION (silent unless error)
-   ===================================================== */
-function clearYamlError() {
-  elYamlStatus.textContent = "";
-  elYamlStatus.style.display = "none";
-}
-function showYamlError(msg) {
-  elYamlStatus.textContent = msg;
-  elYamlStatus.style.display = "block";
-}
-function shouldValidateYaml(text) {
-  const s = String(text || "").trim();
-  return s && (s.includes(":") || s.startsWith("- "));
-}
-function validateYamlText(text) {
-  // Never break the app if YAML lib isn't available
-  if (!window.jsyaml || typeof window.jsyaml.load !== "function") return true;
+let indexData = [];
+let rewardEntries = [];
 
-  const s = String(text || "").trim();
-  if (!shouldValidateYaml(s)) {
-    clearYamlError();
-    return true;
-  }
+let selectedEntry = null;
+let selectedMeta = null;
+
+/** meta cache by id */
+const metaById = {};
+/** reward meta cache */
+const rewardMetaById = {};
+/** per-id placeholder values */
+let baseValues = {};
+let rewardValuesById = {};
+
+/**
+ * Pick folder click handler (inline onclick).
+ * @param {Event} ev
+ */
+async function onPickFolderClick(ev) {
   try {
-    window.jsyaml.load(s);
-    clearYamlError();
-    return true;
-  } catch (err) {
-    const line = err?.mark?.line;
-    const col = err?.mark?.column;
-    const loc =
-      Number.isInteger(line) && Number.isInteger(col)
-        ? ` (line ${line + 1}, col ${col + 1})`
-        : "";
-    showYamlError(`Invalid YAML${loc}: ${err.message || String(err)}`);
-    return false;
+    ev.preventDefault();
+    if (!window.showDirectoryPicker) {
+      throw new Error("showDirectoryPicker() is not available in this browser/context.");
+    }
+    const handle = await window.showDirectoryPicker();
+    if (!handle) return;
+    window.rootDirHandle = handle;
+    rootDirHandle = handle;
+    elMsg.textContent = "";
+    await loadIndex();
+  } catch (e) {
+    console.error(e);
+    elMsg.textContent = (e && e.message) ? e.message : String(e);
   }
-}
-
-/* =====================================================
-   LOCAL FILE ACCESS (file:// only)
-   ===================================================== */
-async function pickRootFolder() {
-  if (!window.showDirectoryPicker) {
-    throw new Error("Local mode requires Chrome/Edge/Brave (File System Access API).");
-  }
-  rootDirHandle = await window.showDirectoryPicker();
 }
 
 /**
- * Reads a local file relative to the picked root folder.
- *
- * @param {string} path
+ * Read a file as text in local mode.
+ * @param {string} relPath
  * @returns {Promise<string>}
  */
-async function readLocalFile(path) {
-  const clean = String(path || "").replace(/^\/+/, "").trim();
-  if (!clean) throw new Error("Local read failed: empty path");
-  if (!rootDirHandle) await pickRootFolder();
-
-  const parts = clean.split("/").filter(Boolean);
+async function readLocalText(relPath) {
+  if (!rootDirHandle) throw new Error("No folder selected.");
+  const parts = relPath.split("/").filter(Boolean);
   let dir = rootDirHandle;
-
   for (let i = 0; i < parts.length - 1; i++) {
-    const seg = parts[i];
-    try {
-      dir = await dir.getDirectoryHandle(seg);
-    } catch {
-      throw new Error(
-        `Local read failed: missing directory "${seg}" while resolving "${clean}". ` +
-        `Pick the repo root (contains presets/ or bundles/).`
-      );
-    }
+    dir = await dir.getDirectoryHandle(parts[i]);
   }
-
-  const fileName = parts[parts.length - 1];
-  try {
-    const fh = await dir.getFileHandle(fileName);
-    const file = await fh.getFile();
-    return await file.text();
-  } catch {
-    throw new Error(
-      `Local read failed: missing file "${fileName}" while resolving "${clean}". ` +
-      `Pick the repo root (contains presets/ or bundles/).`
-    );
-  }
-}
-
-/* =====================================================
-   FETCH ABSTRACTION
-   ===================================================== */
-async function fetchText(path) {
-  if (isFileMode) {
-    return readLocalFile(path);
-  }
-  const r = await fetch(path, { cache: "no-store" });
-  if (!r.ok) throw new Error(`HTTP ${r.status} for ${path}`);
-  return r.text();
-}
-
-async function fetchJson(path) {
-  return JSON.parse(await fetchText(path));
-}
-
-/* =====================================================
-   HELPERS (from build-index.mjs)
-   ===================================================== */
-/**
- * @param {any} domains
- * @returns {string[]}
- */
-function normalizeDomains(domains) {
-  if (!Array.isArray(domains)) return [];
-  return domains
-    .filter((d) => typeof d === "string" && d.trim().length > 0)
-    .map((d) => d.trim().toLowerCase())
-    .map((d) => (d.startsWith("www.") ? d.substring(4) : d))
-    .filter((d, i, a) => a.indexOf(d) === i)
-    .sort();
+  const fh = await dir.getFileHandle(parts[parts.length - 1]);
+  return await (await fh.getFile()).text();
 }
 
 /**
- * @param {any} keywords
- * @returns {string[]}
+ * Fetch text either from local folder or HTTP.
+ * @param {string} relPath
+ * @returns {Promise<string>}
  */
-function normalizeKeywords(keywords) {
-  if (!Array.isArray(keywords)) return [];
-  return keywords
-    .filter((k) => typeof k === "string" && k.trim().length > 0)
-    .map((k) => k.trim().toLowerCase())
-    .filter((k, i, a) => a.indexOf(k) === i)
-    .sort();
+async function fetchText(relPath) {
+  if (isFileMode) return await readLocalText(relPath);
+  const r = await fetch(relPath);
+  if (!r.ok) throw new Error("Failed to fetch " + relPath + " (" + r.status + ")");
+  return await r.text();
 }
 
 /**
- * @param {string} metaPath
- * @returns {string}
+ * Fetch json either from local folder or HTTP.
+ * @param {string} relPath
+ * @returns {Promise<any>}
  */
-function inferCategory(metaPath) {
-  const p = String(metaPath || "").replaceAll("\\", "/");
-  if (p.includes("presets/votesites/")) return "votesites";
-  if (p.includes("presets/rewards/")) return "rewards";
-  if (p.includes("presets/milestones/")) return "milestones";
-  if (p.includes("bundles/")) return "bundles";
-  return "other";
+async function fetchJson(relPath) {
+  const t = await fetchText(relPath);
+  return JSON.parse(t);
 }
 
 /**
- * @param {any} meta
- * @param {string} relMetaPath
- * @returns {any}
+ * Recursively scan for *.meta.json under presets/.
+ * @param {FileSystemDirectoryHandle} dirHandle
+ * @param {string} relPrefix
+ * @returns {Promise<{path:string, category:string}[]>}
  */
-function toIndexEntry(meta, relMetaPath) {
-  const id = meta?.id;
-  const name = meta?.display?.name;
-  if (typeof id !== "string" || id.trim() === "") {
-    throw new Error(`Missing/invalid meta.id in ${relMetaPath}`);
-  }
-  if (typeof name !== "string" || name.trim() === "") {
-    throw new Error(`Missing/invalid display.name in ${relMetaPath}`);
-  }
-
-  const description =
-    typeof meta?.display?.description === "string" ? meta.display.description : "";
-
-  const domains = normalizeDomains(meta?.match?.domains);
-  const keywords = normalizeKeywords(meta?.match?.keywords);
-
-  const updatedAt =
-    typeof meta?.updatedAt === "string" && meta.updatedAt.trim() !== ""
-      ? meta.updatedAt
-      : null;
-
-  const verified = meta?.verified === true;
-
-  return {
-    id,
-    category: inferCategory(relMetaPath),
-    name,
-    description,
-    keywords,
-    domains,
-    metaPath: relMetaPath.replaceAll("\\", "/"),
-    updatedAt,
-    verified,
-  };
-}
-
-/**
- * @param {any[]} entries
- * @returns {any[]}
- */
-function sortEntries(entries) {
-  return entries.sort((a, b) => {
-    const c = (a.category || "").localeCompare(b.category || "");
-    if (c !== 0) return c;
-    return (a.id || "").localeCompare(b.id || "");
-  });
-}
-
-/**
- * Recursively walk directory handles and return paths that match.
- *
- * @param {FileSystemDirectoryHandle} dir
- * @param {(p: string) => boolean} match
- * @param {string} prefix
- * @param {string[]} out
- * @returns {Promise<string[]>}
- */
-async function walkFiles(dir, match, prefix = "", out = []) {
-  for await (const [name, handle] of dir.entries()) {
-    const fullPath = prefix ? `${prefix}/${name}` : name;
-    if (handle.kind === "directory") {
-      await walkFiles(handle, match, fullPath, out);
-    } else if (handle.kind === "file") {
-      if (match(fullPath)) out.push(fullPath);
+async function scanMetaFiles(dirHandle, relPrefix) {
+  const out = [];
+  for await (const [name, handle] of dirHandle.entries()) {
+    if (handle.kind === "file") {
+      if (name.endsWith(".meta.json")) {
+        // category is first segment after presets/
+        const relPath = relPrefix + name;
+        const after = relPath.replace(/^presets\//, "");
+        const cat = after.split("/")[0] || "unknown";
+        out.push({ path: relPath, category: cat });
+      }
+    } else if (handle.kind === "directory") {
+      // skip hidden folders
+      if (name.startsWith(".")) continue;
+      out.push(...await scanMetaFiles(handle, relPrefix + name + "/"));
     }
   }
   return out;
 }
 
 /**
- * Build index entries in local mode by scanning presets/ and bundles/,
- * emulating tools/build-index.mjs behavior.
- *
- * @returns {Promise<any[]>}
+ * Load index list. In local mode, scans presets/**.meta.json (no index.json needed).
  */
-async function buildIndexFromLocalRepo() {
-  if (!rootDirHandle) await pickRootFolder();
+async function loadIndex() {
+  elMsg.textContent = "";
+  elStatus.textContent = isFileMode ? "Local mode" : "Loading...";
+  indexData = [];
+  rewardEntries = [];
+  Object.keys(metaById).forEach(k => delete metaById[k]);
+  Object.keys(rewardMetaById).forEach(k => delete rewardMetaById[k]);
 
-  let presetsDir = null;
-  let bundlesDir = null;
-
-  try { presetsDir = await rootDirHandle.getDirectoryHandle("presets"); } catch {}
-  try { bundlesDir = await rootDirHandle.getDirectoryHandle("bundles"); } catch {}
-
-  if (!presetsDir && !bundlesDir) {
-    throw new Error("No presets/ or bundles/ folder found. Pick the repo root folder.");
+  if (isFileMode) {
+    if (!rootDirHandle) {
+      elStatus.textContent = "Local mode (pick a folder)";
+      renderIndex();
+      return;
+    }
+    // Expect the picked folder to be the project root containing "presets/"
+    let presetsDir;
+    try {
+      presetsDir = await rootDirHandle.getDirectoryHandle("presets");
+    } catch {
+      throw new Error('Could not find a "presets" folder in the selected directory. Pick the folder that contains presets/.');
+    }
+    const metas = await scanMetaFiles(presetsDir, "presets/");
+    for (const m of metas) {
+      const meta = await fetchJson(m.path);
+      const name = meta?.display?.name || meta?.id || m.path;
+      const entry = {
+        id: meta.id,
+        name,
+        category: m.category,
+        metaPath: m.path
+      };
+      indexData.push(entry);
+      metaById[entry.id] = meta;
+      if (m.category === "rewards") {
+        rewardEntries.push(entry);
+        rewardMetaById[entry.id] = meta;
+      }
+    }
+  } else {
+    // HTTP mode: still expects index.json
+    const idx = await fetchJson("index.json");
+    indexData = idx.entries || [];
+    for (const e of indexData) {
+      const meta = await fetchJson(e.metaPath);
+      metaById[e.id] = meta;
+      if (e.category === "rewards") {
+        rewardEntries.push(e);
+        rewardMetaById[e.id] = meta;
+      }
+    }
   }
 
-  const metaPaths = [];
+  indexData.sort((a,b) => (a.category+a.name).localeCompare(b.category+b.name));
+  rewardEntries.sort((a,b) => a.name.localeCompare(b.name));
 
-  if (presetsDir) {
-    const found = await walkFiles(presetsDir, (p) => p.endsWith(".meta.json"), "presets");
-    metaPaths.push(...found);
+  elStatus.textContent = isFileMode ? `Local mode (${indexData.length} presets)` : `Loaded (${indexData.length} presets)`;
+  renderIndex();
+}
+
+/**
+ * Render list filtered.
+ */
+function renderIndex() {
+  const q = (elQ.value || "").trim().toLowerCase();
+  const cat = elCat.value || "";
+  const rows = indexData.filter(e => {
+    if (cat && e.category !== cat) return false;
+    if (!q) return true;
+    return (e.id || "").toLowerCase().includes(q) || (e.name || "").toLowerCase().includes(q);
+  });
+
+  elCount.textContent = `${rows.length} shown / ${indexData.length} total`;
+  elRows.innerHTML = rows.map(e => `
+    <tr style="cursor:pointer;" onclick="selectPreset('${escapeHtml(e.id)}')">
+      <td>${escapeHtml(e.id)}</td>
+      <td>${escapeHtml(e.category)}</td>
+      <td>${escapeHtml(e.name)}</td>
+    </tr>
+  `).join("");
+
+  if (rows.length === 0) {
+    elRows.innerHTML = `<tr><td colspan="3" class="muted">No presets found.</td></tr>`;
   }
-  if (bundlesDir) {
-    const found = await walkFiles(bundlesDir, (p) => p.endsWith(".bundle.json"), "bundles");
-    metaPaths.push(...found);
+}
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[c]));
+}
+
+/**
+ * Build placeholder form for a meta.
+ * @param {HTMLElement} container
+ * @param {Object} placeholders
+ * @param {Object} valuesObj
+ * @param {Function} onChange
+ */
+function buildForm(container, placeholders, valuesObj, onChange) {
+  container.innerHTML = "";
+  if (!placeholders || Object.keys(placeholders).length === 0) {
+    container.innerHTML = `<div class="muted small">No placeholders.</div>`;
+    return;
   }
 
-  const entries = [];
-  const seenIds = new Set();
+  for (const [key, def] of Object.entries(placeholders)) {
+    const lab = document.createElement("label");
+    lab.innerHTML = `<strong>${escapeHtml(def.label || key)}</strong>`;
 
-  for (const relPath of metaPaths) {
-    const meta = JSON.parse(await readLocalFile(relPath));
+    const type = String(def.type || "").toLowerCase();
+    const isTriggerType = key === "triggerType";
 
-    if (relPath.endsWith(".bundle.json")) {
-      const id = meta?.id;
-      const name = meta?.display?.name;
-      if (typeof id !== "string" || typeof name !== "string") {
-        throw new Error(`Bundle missing id/display.name: ${relPath}`);
+    // ENUM dropdown support
+    const enumValues = Array.isArray(def.values) ? def.values : (isTriggerType ? ["AT", "EVERY"] : null);
+    if ((type === "enum" && enumValues && enumValues.length) || (isTriggerType && enumValues)) {
+      const sel = document.createElement("select");
+      sel.dataset.key = key;
+
+      // Populate options
+      for (const v of enumValues) {
+        const opt = document.createElement("option");
+        opt.value = String(v);
+        opt.textContent = String(v);
+        sel.appendChild(opt);
       }
 
-      const entry = {
-        id,
-        category: "bundles",
-        name,
-        description: typeof meta?.display?.description === "string" ? meta.display.description : "",
-        keywords: normalizeKeywords(meta?.keywords),
-        domains: [],
-        metaPath: relPath.replaceAll("\\", "/"),
-        updatedAt: typeof meta?.updatedAt === "string" ? meta.updatedAt : null,
-        verified: meta?.verified === true,
-      };
+      const current = valuesObj[key] ?? def.default ?? (enumValues[0] ?? "");
+      if (valuesObj[key] == null) valuesObj[key] = current;
+      sel.value = String(valuesObj[key]);
 
-      if (seenIds.has(entry.id)) throw new Error(`Duplicate id: ${entry.id}`);
-      seenIds.add(entry.id);
-      entries.push(entry);
+      sel.addEventListener("change", () => {
+        valuesObj[key] = sel.value;
+        onChange();
+      });
+
+      lab.appendChild(sel);
+      container.appendChild(lab);
       continue;
     }
 
-    const entry = toIndexEntry(meta, relPath);
-    if (seenIds.has(entry.id)) throw new Error(`Duplicate id: ${entry.id}`);
-    seenIds.add(entry.id);
-    entries.push(entry);
-  }
+    // Default: textarea
+    const ta = document.createElement("textarea");
+    ta.value = valuesObj[key] ?? def.default ?? "";
+    ta.dataset.key = key;
 
-  return sortEntries(entries);
+    // Persist defaults so rebuild() sees them even before the user types.
+    if (valuesObj[key] == null) {
+      valuesObj[key] = ta.value;
+    }
+
+    ta.addEventListener("input", () => {
+      valuesObj[key] = ta.value;
+      onChange();
+    });
+
+    lab.appendChild(ta);
+    container.appendChild(lab);
+  }
 }
 
-/* =====================================================
-   ORIGINAL APP HELPERS
-   ===================================================== */
-function norm(s) { return String(s || "").toLowerCase().trim(); }
+async function selectPreset(id) {
+  const entry = indexData.find(e => e.id === id);
+  if (!entry) return;
 
-function toYamlListBlock(multiline, indentSpaces) {
-  const pad = " ".repeat(indentSpaces);
-  const lines = String(multiline || "")
+  selectedEntry = entry;
+  selectedMeta = metaById[id] || await fetchJson(entry.metaPath);
+
+  elSelTitle.textContent = `${entry.name} (${entry.id})`;
+  elMerged.textContent = "Building...";
+  elCopy.disabled = true;
+
+  baseValues = {};
+  rewardValuesById = {};
+  elRewardForms.innerHTML = "";
+
+  buildForm(elForm, selectedMeta.placeholders || {}, baseValues, rebuild);
+
+  // Enable rewards for votesites + votemilestones
+  const rewardsSupported = entry.category === "votesites" || entry.category === "votemilestones";
+  elAddRewards.disabled = !rewardsSupported;
+  elAddRewards.innerHTML = rewardEntries.map(e => `<option value="${escapeHtml(e.id)}">${escapeHtml(e.name)}</option>`).join("");
+  elAddRewards.onchange = () => {
+    rebuildRewardForms();
+    rebuild();
+  };
+
+  elRewardHint.textContent = rewardsSupported
+    ? (entry.category === "votemilestones"
+        ? "Rewards merge into VoteMilestones.<milestoneId>.Rewards"
+        : "Rewards merge into VoteSites.<siteKey>.Rewards")
+    : "Rewards not supported for this preset type.";
+
+  rebuildRewardForms();
+  await rebuild();
+}
+
+function rebuildRewardForms() {
+  elRewardForms.innerHTML = "";
+  for (const opt of elAddRewards.selectedOptions) {
+    const rid = opt.value;
+    const meta = rewardMetaById[rid];
+    if (!meta) continue;
+    rewardValuesById[rid] = rewardValuesById[rid] || {};
+    const box = document.createElement("div");
+    box.style.border = "1px solid #eee";
+    box.style.borderRadius = "10px";
+    box.style.padding = "10px";
+    box.style.marginTop = "10px";
+    box.innerHTML = `<div class="small muted" style="margin-bottom:6px;"><strong>${escapeHtml(meta.display?.name || rid)}</strong></div>`;
+    const inner = document.createElement("div");
+    buildForm(inner, meta.placeholders || {}, rewardValuesById[rid], rebuild);
+    box.appendChild(inner);
+    elRewardForms.appendChild(box);
+  }
+}
+
+/**
+ * Parses YAML fragment; returns {} if blank.
+ * @param {string} yml
+ */
+
+/**
+ * Converts a multiline textarea (one per line) into an indented YAML list block.
+ * Example (indent=2):
+ *   - "line1"
+ *   - "line2"
+ *
+ * @param {string} raw multiline string
+ * @param {number} indent number of spaces before '-'
+ * @returns {string} YAML lines or empty string
+ */
+function toYamlListBlock(raw, indent) {
+  const pad = " ".repeat(Math.max(0, indent || 0));
+  const lines = String(raw ?? "")
     .split(/\r?\n/)
     .map(s => s.trim())
-    .filter(s => s.length > 0);
+    .filter(Boolean);
 
-  if (!lines.length) return pad + "- \"\"";
-  return lines.map(l => `${pad}- "${l.replaceAll('"', '\\"')}"`).join("\n");
+  if (lines.length === 0) return "";
+
+  // Quote each line to avoid YAML edge cases (colons, leading symbols, etc.)
+  return lines.map(l => `${pad}- ${JSON.stringify(l)}`).join("\n");
 }
 
-function applyPlaceholders(text, values) {
-  let out = text;
-  for (const [k, v] of Object.entries(values)) {
-    out = out.split(`<${k}>`).join(String(v));
+function parseFragmentYaml(yml) {
+  const t = String(yml || "").trim();
+  if (!t) return {};
+  const obj = jsyaml.load(t) || {};
+  // Clean up common null sections caused by empty placeholders.
+  if (obj && typeof obj === 'object') {
+    if (Object.prototype.hasOwnProperty.call(obj, 'Commands') && obj.Commands == null) delete obj.Commands;
+    if (Object.prototype.hasOwnProperty.call(obj, 'Messages') && obj.Messages == null) delete obj.Messages;
   }
-  return out;
+  return obj;
 }
 
-/* Minimal fragment parser (maps + lists; enough for our preset fragments) */
-function parseFragmentYaml(yaml) {
-  const lines = String(yaml || "").replace(/\t/g, "  ").split(/\r?\n/);
-  while (lines.length && lines[0].trim() === "") lines.shift();
-  while (lines.length && lines[lines.length - 1].trim() === "") lines.pop();
-
-  const root = {};
-  const stack = [{ indent: -1, node: root, type: "map" }];
-
-  function current() { return stack[stack.length - 1]; }
-  function parseScalar(raw) {
-    const s = raw.trim();
-    if (s === "true") return true;
-    if (s === "false") return false;
-    if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
-    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) return s.slice(1, -1);
-    return s;
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const lineRaw = lines[i];
-    if (!lineRaw.trim() || lineRaw.trim().startsWith("#")) continue;
-
-    const indent = lineRaw.match(/^ */)[0].length;
-    const line = lineRaw.trim();
-
-    while (stack.length > 1 && indent <= current().indent) stack.pop();
-    const ctx = current();
-
-    if (line.startsWith("- ")) {
-      if (ctx.type !== "list") continue;
-      ctx.node.push(parseScalar(line.substring(2)));
-      continue;
-    }
-
-    const idx = line.indexOf(":");
-    if (idx === -1 || ctx.type !== "map") continue;
-
-    const key = line.substring(0, idx).trim();
-    const rest = line.substring(idx + 1).trim();
-
-    if (rest === "") {
-      let j = i + 1;
-      let next = null;
-      while (j < lines.length) {
-        const t = lines[j].trim();
-        if (t && !t.startsWith("#")) { next = lines[j].trim(); break; }
-        j++;
-      }
-      const nextIsList = next && next.startsWith("- ");
-      const child = nextIsList ? [] : {};
-      ctx.node[key] = child;
-      stack.push({ indent, node: child, type: nextIsList ? "list" : "map" });
+/**
+ * Deep merge (objects only).
+ */
+function deepMerge(a, b) {
+  if (!a) a = {};
+  for (const k of Object.keys(b || {})) {
+    const bv = b[k];
+    if (bv && typeof bv === "object" && !Array.isArray(bv)) {
+      a[k] = deepMerge(a[k] || {}, bv);
     } else {
-      ctx.node[key] = parseScalar(rest);
+      a[k] = bv;
     }
   }
-  return root;
+  return a;
 }
 
-function deepMerge(target, source) {
-  if (Array.isArray(target) && Array.isArray(source)) return target.concat(source);
-  if (target && typeof target === "object" && !Array.isArray(target) &&
-      source && typeof source === "object" && !Array.isArray(source)) {
-    for (const [k, v] of Object.entries(source)) {
-      target[k] = (k in target) ? deepMerge(target[k], v) : v;
-    }
-    return target;
-  }
-  return source;
-}
-
-function mergeIntoPath(rootObj, pathStr, fragmentObj) {
-  const parts = pathStr.split(".").filter(p => p.length > 0);
-  if (!parts.length) return;
-
-  let cur = rootObj;
+/**
+ * Merge obj into tree at dot path.
+ * @param {any} tree
+ * @param {string} path
+ * @param {any} obj
+ */
+function mergeIntoPath(tree, path, obj) {
+  const parts = path.split(".").filter(Boolean);
+  let cur = tree;
   for (let i = 0; i < parts.length; i++) {
     const p = parts[i];
-    const last = i === parts.length - 1;
-
-    if (last) {
-      cur[p] = (cur[p] == null) ? fragmentObj : deepMerge(cur[p], fragmentObj);
+    if (i === parts.length - 1) {
+      cur[p] = deepMerge(cur[p] || {}, obj);
     } else {
-      if (cur[p] == null || typeof cur[p] !== "object") cur[p] = {};
+      cur[p] = cur[p] || {};
       cur = cur[p];
     }
   }
 }
 
-function renderYaml(obj, indent = 0) {
-  const pad = " ".repeat(indent);
-  if (Array.isArray(obj)) {
-    return obj.map(v => `${pad}- "${String(v).replaceAll('"','\\"')}"`).join("\n");
-  }
-  if (obj && typeof obj === "object") {
-    return Object.keys(obj).map(k => {
-      const v = obj[k];
-      if (v && typeof v === "object") {
-        return `${pad}${k}:\n${renderYaml(v, indent + 2)}`;
-      }
-      if (typeof v === "string") return `${pad}${k}: "${v.replaceAll('"','\\"')}"`;
-      return `${pad}${k}: ${String(v)}`;
-    }).join("\n");
-  }
-  return `${pad}${String(obj)}`;
-}
+/**
+ * Apply placeholders (<key>) into text.
+ * Indent-safe for multiline values.
+ */
+function applyPlaceholders(text, values) {
+  let out = String(text ?? "");
 
-function buildVoteSiteLinePlaceholders(map) {
-  const vd = String(map.voteDelay ?? "").trim();
-  map.voteDelayLine = vd ? `VoteDelay: ${vd}` : "";
+  for (const [k, raw] of Object.entries(values || {})) {
+    const token = `<${k}>`;
+    if (!out.includes(token)) continue;
 
-  const wuvd = String(map.waitUntilVoteDelay ?? "").trim().toLowerCase();
-  map.waitUntilVoteDelayLine =
-    (wuvd === "true" || wuvd === "false") ? `WaitUntilVoteDelay: ${wuvd}` : "";
+    const v = String(raw ?? "");
 
-  const vdd = String(map.voteDelayDaily ?? "").trim().toLowerCase();
-  map.voteDelayDailyLine =
-    (vdd === "true" || vdd === "false") ? `VoteDelayDaily: ${vdd}` : "";
-
-  const vddh = String(map.voteDelayDailyHour ?? "").trim();
-  map.voteDelayDailyHourLine =
-    (/^\d+$/.test(vddh) ? `VoteDelayDailyHour: ${vddh}` : "");
-}
-
-async function loadFragments(meta) {
-  const frags = Array.isArray(meta.fragments) ? meta.fragments : [];
-  const out = [];
-  for (const f of frags) {
-    if (!f.path || !f.mergeInto) continue;
-    out.push({ mergeInto: f.mergeInto, text: await fetchText(f.path) });
-  }
-  return out;
-}
-
-/* =====================================================
-   STATE (original)
-   ===================================================== */
-let indexData = [];
-let rewardEntries = [];
-let selectedVoteSiteEntry = null;
-let selectedVoteSiteMeta = null;
-
-let voteSiteValues = {};
-let rewardMetasById = {};
-let rewardValuesById = {};
-
-/* =====================================================
-   LOAD INDEX (HTTP uses index.json; file:// builds if missing)
-   ===================================================== */
-async function loadIndex() {
-  elMsg.textContent = "";
-  elStatus.textContent = isFileMode ? "Local mode" : "Loading...";
-  elMerged.textContent = "Loading...";
-  elCopy.disabled = true;
-
-  try {
-    if (!isFileMode) {
-      const idx = await fetchJson("index.json");
-      indexData = idx.entries || [];
-    } else {
-      // file:// mode: try index.json; if missing, emulate build-index.mjs
-      try {
-        const idx = await fetchJson("index.json");
-        indexData = idx.entries || [];
-      } catch {
-        elStatus.textContent = "Local mode: building index from presets/ + bundles/ ...";
-        indexData = await buildIndexFromLocalRepo();
-      }
+    if (!v.includes("\n")) {
+      // Simple global replacement for single-line values (works for mergeInto paths too).
+      out = out.split(token).join(v);
+      continue;
     }
 
-    rewardEntries = indexData.filter(e => e.category === "rewards");
-
-    renderIndex();
-    elStatus.textContent = `Loaded ${indexData.length} presets`;
-    elMerged.textContent = "Select a VoteSite preset.";
-    clearYamlError();
-  } catch (e) {
-    elStatus.textContent = "";
-    elMsg.textContent = e.message || String(e);
-    elMerged.textContent = "Failed to load presets.";
-    elCopy.disabled = true;
-  }
-}
-
-function filteredEntries() {
-  const q = norm(elQ.value);
-  const c = norm(elCat.value);
-
-  let list = indexData.slice();
-  if (c) list = list.filter(e => norm(e.category) === c);
-
-  if (q) {
-    list = list.filter(e => {
-      const hay = [
-        e.id, e.category, e.name, e.description,
-        ...(e.keywords || []),
-        ...(e.domains || [])
-      ].map(norm).join(" ");
-      return hay.includes(q);
+    // Indent-aware replacement for multiline values (YAML blocks).
+    const reToken = new RegExp(`(^[\\t ]*)${token.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}`, "gm");
+    out = out.replace(reToken, (match, indent) => {
+      const lines = v.split(/\r?\n/);
+      const first = lines[0];
+      const rest = lines.slice(1).map(l => (l.length ? indent + l : l));
+      return indent + [first, ...rest].join("\n");
     });
   }
 
-  elCount.textContent = `${list.length} shown / ${indexData.length} total`;
-  return list;
+  // Remove leftover placeholder-only lines
+  out = out.replace(/^[ \t]*<[^>\n]+>[ \t]*\r?\n/gm, "");
+  return out;
 }
 
-function renderIndex() {
-  const list = filteredEntries();
-  elRows.innerHTML = list.map(e => `
-    <tr data-id="${e.id}">
-      <td><code>${e.id}</code></td>
-      <td>${e.category}</td>
-      <td>${e.name}</td>
-    </tr>
-  `).join("");
-
-  elRows.querySelectorAll("tr").forEach(tr => {
-    tr.onclick = () => selectPreset(tr.dataset.id);
-  });
+/**
+ * Helpers for structured VoteMilestones
+ */
+function parseBool(s) {
+  const v = String(s ?? "").trim().toLowerCase();
+  if (v === "true" || v === "yes" || v === "1") return true;
+  if (v === "false" || v === "no" || v === "0") return false;
+  return false;
 }
+function parseLineList(s) {
+  return String(s ?? "")
+    .split(/\r?\n/)
+    .map(x => x.trim())
+    .filter(Boolean);
+}
+function buildStructuredMilestone(vals) {
+  const id = String(vals.milestoneId ?? "").trim();
+  if (!id) throw new Error("milestoneId is required");
 
-/* =====================================================
-   SELECTION
-   ===================================================== */
-async function selectPreset(id) {
-  const entry = indexData.find(e => e.id === id);
-  if (!entry) return;
+  const obj = {};
+  obj.Enabled = parseBool(vals.enabled);
+  obj.Total = String(vals.total ?? "").trim();
 
-  if (entry.category !== "votesites") {
-    elMerged.textContent = "Please select a VoteSites preset (rewards are add-ons).";
-    return;
+  const triggerType = String(vals.triggerType ?? "AT").trim().toUpperCase();
+  if (triggerType === "EVERY") {
+    const n = Number(String(vals.every ?? "").trim());
+    if (!Number.isFinite(n) || n <= 0) throw new Error("Every must be a positive number");
+    obj.Every = n;
+  } else {
+    const at = parseLineList(vals.atList);
+    if (at.length === 0) throw new Error("At list must have at least one value");
+    obj.At = at;
   }
 
-  selectedVoteSiteEntry = entry;
-  elSelTitle.textContent = `${entry.name} (${entry.id})`;
-  elMerged.textContent = "Loading VoteSite preset...";
-  elCopy.disabled = true;
+  const group = String(vals.group ?? "").trim();
+  if (group) obj.Group = group;
 
-  rewardMetasById = {};
-  rewardValuesById = {};
-  elRewardForms.innerHTML = "";
-
-  elAddRewards.innerHTML = rewardEntries.map(e => `<option value="${e.id}">${e.name}</option>`).join("");
-  elAddRewards.onchange = onRewardsChanged;
-
-  try {
-    selectedVoteSiteMeta = await fetchJson(entry.metaPath);
-    buildVoteSiteForm();
-    await rebuild();
-  } catch (e) {
-    elMerged.textContent = "Failed to load preset: " + (e.message || String(e));
-  }
-}
-
-function buildVoteSiteForm() {
-  const ph = selectedVoteSiteMeta.placeholders || {};
-  voteSiteValues = {};
-  elVoteSiteForm.innerHTML = "";
-
-  for (const [k, spec] of Object.entries(ph)) {
-    const el = document.createElement("input");
-    el.value = spec.default ?? "";
-    voteSiteValues[k] = el.value;
-
-    el.oninput = () => {
-      voteSiteValues[k] = el.value;
-      rebuild();
-    };
-
-    const wrap = document.createElement("label");
-    wrap.innerHTML = `<strong>${spec.label || k}</strong>`;
-    wrap.appendChild(el);
-    elVoteSiteForm.appendChild(wrap);
-  }
-}
-
-async function onRewardsChanged() {
-  elRewardForms.innerHTML = "";
-
-  for (const opt of elAddRewards.selectedOptions) {
-    const rewardId = opt.value;
-    const entry = rewardEntries.find(r => r.id === rewardId);
-    if (!entry) continue;
-
-    if (!rewardMetasById[rewardId]) {
-      rewardMetasById[rewardId] = await fetchJson(entry.metaPath);
+  const limitType = String(vals.limitType ?? "NONE").trim().toUpperCase();
+  if (limitType && limitType !== "NONE") {
+    obj.Limit = { Type: limitType };
+    if (limitType === "COOLDOWN") {
+      const dur = String(vals.limitDuration ?? "").trim();
+      if (dur) obj.Limit.Duration = dur;
     }
-
-    if (!rewardValuesById[rewardId]) {
-      rewardValuesById[rewardId] = {};
-      const ph = rewardMetasById[rewardId].placeholders || {};
-      for (const [k, spec] of Object.entries(ph)) {
-        rewardValuesById[rewardId][k] = spec.default ?? "";
-      }
-    }
-
-    renderRewardForm(rewardId, entry.name, rewardMetasById[rewardId]);
   }
-
-  await rebuild();
+  return { id, obj };
 }
 
-function renderRewardForm(rewardId, displayName, meta) {
-  const ph = meta.placeholders || {};
-  const container = document.createElement("div");
-  container.className = "subcard";
-
-  container.innerHTML = `
-    <div>
-      <strong>${displayName}</strong>
-      <div class="muted" style="font-size:12px;">${rewardId}</div>
-    </div>
-  `;
-
-  for (const [k, spec] of Object.entries(ph)) {
-    const isMultiline = (k === "commands" || k === "messages");
-    const el = document.createElement(isMultiline ? "textarea" : "input");
-    el.value = rewardValuesById[rewardId][k] ?? "";
-    if (isMultiline) el.rows = 4;
-
-    el.oninput = () => {
-      rewardValuesById[rewardId][k] = el.value;
-      rebuild();
-    };
-
-    const wrap = document.createElement("label");
-    wrap.innerHTML = `<strong>${spec.label || k}</strong>`;
-    wrap.appendChild(el);
-    container.appendChild(wrap);
+/**
+ * Load fragments for a meta (reads file path for each fragment).
+ * @param {any} meta
+ * @returns {Promise<{mergeInto:string, text:string}[]>}
+ */
+async function loadFragments(meta) {
+  const frags = [];
+  for (const f of (meta.fragments || [])) {
+    const txt = await fetchText(f.path);
+    frags.push({ mergeInto: f.mergeInto, text: txt });
   }
-
-  elRewardForms.appendChild(container);
+  return frags;
 }
 
-/* =====================================================
-   MERGE BUILD
-   ===================================================== */
+/**
+ * Rebuild merged YAML.
+ */
 async function rebuild() {
-  if (!selectedVoteSiteMeta) return;
+  if (!selectedEntry || !selectedMeta) return;
 
-  elMerged.textContent = "Building merged YAML...";
+  elMsg.textContent = "";
   elCopy.disabled = true;
 
-  const tree = {};
-
   try {
-    // 1) Merge VoteSite fragments into VoteSites
-    const voteSiteDerived = { ...voteSiteValues };
-    buildVoteSiteLinePlaceholders(voteSiteDerived);
+    const tree = {};
 
-    const voteSiteFrags = await loadFragments(selectedVoteSiteMeta);
-    for (const f of voteSiteFrags) {
-      const mergeInto = applyPlaceholders(f.mergeInto, voteSiteDerived).trim();
-      if (!mergeInto.startsWith("VoteSites")) continue;
+    const isStructuredMilestone =
+      selectedEntry.category === "votemilestones"
+      && selectedMeta.type === "votemilestone_structured";
 
-      const text = applyPlaceholders(f.text, voteSiteDerived).trim();
-      const obj = parseFragmentYaml(text);
-      mergeIntoPath(tree, mergeInto, obj);
-    }
-
-    // 2) Merge reward add-ons into VoteSites.<siteKey>.Rewards
-    const baseMap = { ...voteSiteDerived };
-
-    for (const opt of elAddRewards.selectedOptions) {
-      const rewardId = opt.value;
-      const meta = rewardMetasById[rewardId];
-      if (!meta) continue;
-
-      const frags = await loadFragments(meta);
-
-      const rewardVals = rewardValuesById[rewardId] || {};
-      const rewardDerived = { ...rewardVals };
-
-      if (rewardDerived.commands != null) rewardDerived.commandsBlock = toYamlListBlock(rewardDerived.commands, 2);
-      if (rewardDerived.messages != null) rewardDerived.messagesBlock = toYamlListBlock(rewardDerived.messages, 2);
-
-      const mergedMap = { ...baseMap, ...rewardDerived };
-
+    // 1) Base preset
+    if (isStructuredMilestone) {
+      const ms = buildStructuredMilestone(baseValues);
+      tree.VoteMilestones = tree.VoteMilestones || {};
+      tree.VoteMilestones[ms.id] = deepMerge(tree.VoteMilestones[ms.id] || {}, ms.obj);
+    } else {
+      const frags = await loadFragments(selectedMeta);
       for (const f of frags) {
-        const mergeInto = applyPlaceholders(f.mergeInto, mergedMap).trim();
-        if (!mergeInto.startsWith("VoteSites")) continue;
-
-        const text = applyPlaceholders(f.text, mergedMap).trim();
-        const obj = parseFragmentYaml(text);
+        const mergeInto = applyPlaceholders(f.mergeInto, baseValues).trim();
+        const rendered = applyPlaceholders(f.text, baseValues);
+        const obj = parseFragmentYaml(rendered);
         mergeIntoPath(tree, mergeInto, obj);
       }
     }
 
-    const out = renderYaml(tree, 0);
-    elMerged.textContent = out ? (out.trimEnd() + "\n") : "Nothing to output.";
+    // 2) Rewards add-ons
+    for (const opt of elAddRewards.selectedOptions) {
+      const rid = opt.value;
+      const meta = rewardMetaById[rid];
+      if (!meta) continue;
 
-    let valid = true;
-    try {
-      valid = validateYamlText(elMerged.textContent);
-    } catch {
-      valid = true;
-      clearYamlError();
+      const rVals = rewardValuesById[rid] || {};
+      const derived = { ...rVals };
+      // Common reward presets use <commandsBlock> / <messagesBlock> placeholders.
+      if (derived.commands != null) derived.commandsBlock = toYamlListBlock(derived.commands, 2);
+      if (derived.messages != null) derived.messagesBlock = toYamlListBlock(derived.messages, 2);
+      const mergedVals = { ...baseValues, ...derived };
+
+      const frags = await loadFragments(meta);
+      for (const f of frags) {
+        let mergeInto = applyPlaceholders(f.mergeInto, mergedVals).trim();
+        if (selectedEntry.category === "votemilestones") {
+          mergeInto = applyPlaceholders("VoteMilestones.<milestoneId>.Rewards", mergedVals).trim();
+        }
+        const rendered = applyPlaceholders(f.text, mergedVals);
+        const obj = parseFragmentYaml(rendered);
+        mergeIntoPath(tree, mergeInto, obj);
+      }
     }
-    elCopy.disabled = !valid;
 
+    const out = jsyaml.dump(tree, { lineWidth: 120 });
+    elMerged.textContent = out ? (out.trimEnd() + "\n") : "Nothing to output.";
+    elCopy.disabled = false;
   } catch (e) {
-    elMerged.textContent = "Failed to build YAML: " + (e.message || String(e));
-    showYamlError("YAML validation skipped: failed to build output");
-    elCopy.disabled = true;
+    console.error(e);
+    elMsg.textContent = (e && e.message) ? e.message : String(e);
+    elMerged.textContent = "Error building YAML.";
   }
 }
 
-/* =====================================================
-   EVENTS
-   ===================================================== */
-document.getElementById("reloadBtn").onclick = loadIndex;
+document.getElementById("reloadBtn").addEventListener("click", () => loadIndex());
 elQ.addEventListener("input", renderIndex);
 elCat.addEventListener("change", renderIndex);
 
-elCopy.onclick = async () => {
+elCopy.addEventListener("click", async () => {
   try {
-    await navigator.clipboard.writeText(elMerged.textContent);
-    elCopy.textContent = "Copied!";
-    setTimeout(() => elCopy.textContent = "Copy", 900);
-  } catch {
-    const ta = document.createElement("textarea");
-    ta.value = elMerged.textContent;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    document.body.removeChild(ta);
-    elCopy.textContent = "Copied!";
-    setTimeout(() => elCopy.textContent = "Copy", 900);
+    await navigator.clipboard.writeText(elMerged.textContent || "");
+    elStatus.textContent = "Copied!";
+    setTimeout(() => { elStatus.textContent = isFileMode ? "Local mode" : ""; }, 1200);
+  } catch (e) {
+    elMsg.textContent = "Copy failed: " + (e && e.message ? e.message : String(e));
   }
-};
+});
 
-/* =====================================================
-   LOCAL MODE BUTTON
-   ===================================================== */
-if (elPickFolderBtn) {
-  elPickFolderBtn.style.display = isFileMode ? "inline-block" : "none";
-  elPickFolderBtn.onclick = async () => {
-    try {
-      rootDirHandle = null;
-      await pickRootFolder();
-      await loadIndex();
-    } catch (e) {
-      elMsg.textContent = e.message || String(e);
-    }
-  };
-}
-
-loadIndex();
+// Auto-load in HTTP mode; in file mode you need to pick folder.
+if (!isFileMode) loadIndex();
 </script>
 
 </body>
