@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "reward:inline:commands_only",
+  "display": {
+    "name": "Inline Reward: Commands only",
+    "description": "Adds Commands under VoteSites.<siteKey>.Rewards."
+  },
+  "match": {
+    "keywords": ["reward", "inline", "commands", "no messages"]
+  },
+  "placeholders": {
+    "commands": {
+      "type": "string",
+      "label": "Commands (one per line)",
+      "default": "eco give %player% 500",
+      "example": "eco give %player% 500\ncrate give %player% vote 1"
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/rewards/inline_commands.rewardblock.yml",
+      "mergeInto": "VoteSites.<siteKey>.Rewards"
+    }
+  ],
+  "verified": true
+}
