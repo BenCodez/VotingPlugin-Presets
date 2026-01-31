@@ -25,6 +25,7 @@
     .split { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
     .list { max-height:420px; overflow:auto; }
     label { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+    .subcard { border:1px solid #eee; border-radius:10px; padding:10px; background:#fcfcfc; margin-top:10px; }
   </style>
 </head>
 
@@ -88,16 +89,19 @@
 
     <div class="split">
       <div>
-        <div class="pill">Placeholders</div>
-        <div id="placeholderForm" style="margin-top:8px;"></div>
+        <div class="pill">VoteSite placeholders</div>
+        <div id="votesiteForm" style="margin-top:8px;"></div>
       </div>
 
       <div>
-        <div class="pill">Add reward examples</div>
+        <div class="pill">Reward add-ons</div>
         <div class="muted" style="font-size:12px; margin-top:6px;">
-          These merge into <code>VoteSites.&lt;siteKey&gt;.Rewards</code>
+          Reward fragments merge into <code>VoteSites.&lt;siteKey&gt;.Rewards</code>
         </div>
-        <select id="addonRewards" multiple size="8" style="width:100%; margin-top:8px;"></select>
+        <select id="addonRewards" multiple size="7" style="width:100%; margin-top:8px;"></select>
+
+        <div class="pill" style="margin-top:12px;">Reward placeholders</div>
+        <div id="rewardForms"></div>
       </div>
     </div>
 
@@ -108,13 +112,11 @@
 
 <script>
 /* ---------------- helpers ---------------- */
-
 function normalizeBaseUrl(url) {
   let u = (url || "").trim();
   if (!u.endsWith("/")) u += "/";
   return u;
 }
-
 function norm(s) { return String(s || "").toLowerCase().trim(); }
 
 function toYamlListBlock(multiline, indentSpaces) {
@@ -136,58 +138,26 @@ function applyPlaceholders(text, values) {
   return out;
 }
 
-/**
- * Very small YAML-ish parser for our use-case:
- * - fragments are "children blocks" (objects/lists/scalars)
- * - we only need to merge them into an object tree and then print YAML
- *
- * This supports:
- * - key: value
- * - key:
- *     child...
- * - lists:
- *     - "item"
- *
- * It's intentionally minimal but works for our preset fragments.
- */
-
-/** @returns {boolean} */
-function isQuoted(s) {
-  return (s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"));
-}
-
-/** @returns {string} */
-function unquote(s) {
-  if (isQuoted(s)) return s.slice(1, -1);
-  return s;
-}
-
-/**
- * Parses a YAML fragment into a JS object representing that fragment.
- * Minimal: handles maps + string/number/bool + list of strings.
- *
- * @param {string} yaml
- * @returns {any}
- */
+/* Minimal fragment parser (maps + lists) */
 function parseFragmentYaml(yaml) {
   const lines = String(yaml || "").replace(/\t/g, "  ").split(/\r?\n/);
-  // Remove empty lines at ends
   while (lines.length && lines[0].trim() === "") lines.shift();
   while (lines.length && lines[lines.length - 1].trim() === "") lines.pop();
 
-  // Stack of { indent, node, type } where type is "map" or "list"
   const root = {};
   const stack = [{ indent: -1, node: root, type: "map" }];
 
   function current() { return stack[stack.length - 1]; }
-
   function parseScalar(raw) {
     const s = raw.trim();
     if (s === "true") return true;
     if (s === "false") return false;
     if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
-    // keep quotes content as string; otherwise string
-    return unquote(s);
+    // keep quoted values as string content
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+      return s.slice(1, -1);
+    }
+    return s;
   }
 
   for (let i = 0; i < lines.length; i++) {
@@ -197,53 +167,34 @@ function parseFragmentYaml(yaml) {
     const indent = lineRaw.match(/^ */)[0].length;
     const line = lineRaw.trim();
 
-    // Pop stack until parent indent < current indent
     while (stack.length > 1 && indent <= current().indent) stack.pop();
-
     const ctx = current();
 
-    // List item
     if (line.startsWith("- ")) {
       if (ctx.type !== "list") {
-        // Convert last inserted key to list if needed (should already be list)
-        // but if not, create list anyway at this level isn't valid for our fragments
-        // We'll treat it as root list if needed.
-        const list = [];
-        if (ctx.type === "map") {
-          // Root list not expected; just attach to a special key
-          ctx.node.__list__ = list;
-        }
-        stack.push({ indent, node: list, type: "list" });
+        // should not happen in our fragments if well-formed; ignore
+        continue;
       }
-      const listCtx = current();
-      const item = line.substring(2);
-      listCtx.node.push(parseScalar(item));
+      ctx.node.push(parseScalar(line.substring(2)));
       continue;
     }
 
-    // Map key/value
     const idx = line.indexOf(":");
-    if (idx === -1) continue;
+    if (idx === -1 || ctx.type !== "map") continue;
 
     const key = line.substring(0, idx).trim();
     const rest = line.substring(idx + 1).trim();
 
-    if (ctx.type !== "map") {
-      // If current is list, can't place map entries directly; ignore
-      continue;
-    }
-
     if (rest === "") {
-      // key: (start map or list later)
-      // Peek next non-empty line to see if it's a list
+      // determine if next is list
       let j = i + 1;
-      let nextLine = null;
+      let next = null;
       while (j < lines.length) {
         const t = lines[j].trim();
-        if (t && !t.startsWith("#")) { nextLine = lines[j]; break; }
+        if (t && !t.startsWith("#")) { next = lines[j].trim(); break; }
         j++;
       }
-      const nextIsList = nextLine != null && nextLine.trim().startsWith("- ");
+      const nextIsList = next && next.startsWith("- ");
       const child = nextIsList ? [] : {};
       ctx.node[key] = child;
       stack.push({ indent, node: child, type: nextIsList ? "list" : "map" });
@@ -251,48 +202,21 @@ function parseFragmentYaml(yaml) {
       ctx.node[key] = parseScalar(rest);
     }
   }
-
-  // If root had __list__, return that list; otherwise root map
-  if (Object.prototype.hasOwnProperty.call(root, "__list__")) return root.__list__;
   return root;
 }
 
-/**
- * Deep merge:
- * - objects merge recursively
- * - arrays concatenate
- * - scalars overwrite
- *
- * @param {any} target
- * @param {any} source
- * @returns {any}
- */
 function deepMerge(target, source) {
-  if (Array.isArray(target) && Array.isArray(source)) {
-    return target.concat(source);
-  }
-  if (target && typeof target === "object" && !Array.isArray(target)
-      && source && typeof source === "object" && !Array.isArray(source)) {
+  if (Array.isArray(target) && Array.isArray(source)) return target.concat(source);
+  if (target && typeof target === "object" && !Array.isArray(target) &&
+      source && typeof source === "object" && !Array.isArray(source)) {
     for (const [k, v] of Object.entries(source)) {
-      if (Object.prototype.hasOwnProperty.call(target, k)) {
-        target[k] = deepMerge(target[k], v);
-      } else {
-        target[k] = v;
-      }
+      target[k] = (k in target) ? deepMerge(target[k], v) : v;
     }
     return target;
   }
   return source;
 }
 
-/**
- * Merge a fragment object into a root object using a dot-path.
- * For now we only use this for VoteSites paths, but it's generic.
- *
- * @param {object} rootObj
- * @param {string} pathStr dot path like "VoteSites.PMC.Rewards"
- * @param {any} fragmentObj
- */
 function mergeIntoPath(rootObj, pathStr, fragmentObj) {
   const parts = pathStr.split(".").filter(p => p.length > 0);
   if (!parts.length) return;
@@ -303,11 +227,7 @@ function mergeIntoPath(rootObj, pathStr, fragmentObj) {
     const last = i === parts.length - 1;
 
     if (last) {
-      if (cur[p] == null) {
-        cur[p] = fragmentObj;
-      } else {
-        cur[p] = deepMerge(cur[p], fragmentObj);
-      }
+      cur[p] = (cur[p] == null) ? fragmentObj : deepMerge(cur[p], fragmentObj);
     } else {
       if (cur[p] == null || typeof cur[p] !== "object") cur[p] = {};
       cur = cur[p];
@@ -315,55 +235,41 @@ function mergeIntoPath(rootObj, pathStr, fragmentObj) {
   }
 }
 
-/**
- * Render JS object tree to YAML (minimal, but good for our merged output).
- *
- * @param {any} obj
- * @param {number} indent
- * @returns {string}
- */
 function renderYaml(obj, indent = 0) {
   const pad = " ".repeat(indent);
-
   if (Array.isArray(obj)) {
-    return obj.map(v => {
-      if (typeof v === "string") return `${pad}- "${v.replaceAll('"', '\\"')}"`;
-      return `${pad}- ${String(v)}`;
-    }).join("\n");
+    return obj.map(v => `${pad}- "${String(v).replaceAll('"','\\"')}"`).join("\n");
   }
-
   if (obj && typeof obj === "object") {
-    const keys = Object.keys(obj);
-    return keys.map(k => {
+    return Object.keys(obj).map(k => {
       const v = obj[k];
       if (v && typeof v === "object") {
-        const child = renderYaml(v, indent + 2);
-        return `${pad}${k}:\n${child}`;
+        return `${pad}${k}:\n${renderYaml(v, indent + 2)}`;
       }
-      if (typeof v === "string") return `${pad}${k}: "${v.replaceAll('"', '\\"')}"`;
+      if (typeof v === "string") return `${pad}${k}: "${v.replaceAll('"','\\"')}"`;
       return `${pad}${k}: ${String(v)}`;
     }).join("\n");
   }
-
-  // scalar
-  if (typeof obj === "string") return `${pad}"${obj.replaceAll('"', '\\"')}"`;
   return `${pad}${String(obj)}`;
 }
 
 /* ---------------- state ---------------- */
-
-let indexData = null;
-let selected = null;
-let selectedMeta = null;
+let indexData = [];
 let rewardEntries = [];
-let placeholderValues = {};
+let selectedVoteSiteEntry = null;
+let selectedVoteSiteMeta = null;
+
+let voteSiteValues = {};                 // placeholders for votesite
+let rewardMetasById = {};                // cache meta per reward id
+let rewardValuesById = {};               // placeholder values per reward id
 
 const elBase = document.getElementById("baseUrl");
 const elRows = document.getElementById("rows");
 const elMerged = document.getElementById("mergedOut");
 const elCopy = document.getElementById("copyBtn");
 const elSelTitle = document.getElementById("selTitle");
-const elForm = document.getElementById("placeholderForm");
+const elVoteSiteForm = document.getElementById("votesiteForm");
+const elRewardForms = document.getElementById("rewardForms");
 const elAddRewards = document.getElementById("addonRewards");
 const elQ = document.getElementById("q");
 const elCat = document.getElementById("cat");
@@ -372,30 +278,44 @@ const elMsg = document.getElementById("msg");
 const elStatus = document.getElementById("status");
 
 /* ---------------- init base URL ---------------- */
-
 (function initBase() {
-  // Works for repo pages: https://host/repo/index.html -> https://host/repo/
   elBase.value = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, "/");
 })();
 
-/* ---------------- load index ---------------- */
+/* ---------------- fetch helpers ---------------- */
+async function fetchJson(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+  return await r.json();
+}
+async function fetchText(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+  return await r.text();
+}
+async function loadFragments(meta) {
+  const base = normalizeBaseUrl(elBase.value);
+  const frags = Array.isArray(meta.fragments) ? meta.fragments : [];
+  const out = [];
+  for (const f of frags) {
+    if (!f.path || !f.mergeInto) continue;
+    out.push({ mergeInto: f.mergeInto, text: await fetchText(base + f.path) });
+  }
+  return out;
+}
 
+/* ---------------- load index ---------------- */
 async function loadIndex() {
   elMsg.textContent = "";
   elStatus.textContent = "Loading...";
   elMerged.textContent = "Loading...";
   elCopy.disabled = true;
-  elSelTitle.textContent = "None";
 
   const base = normalizeBaseUrl(elBase.value);
 
   try {
-    const idx = await fetch(base + "index.json", { cache: "no-store" }).then(r => {
-      if (!r.ok) throw new Error(`HTTP ${r.status} for ${base}index.json`);
-      return r.json();
-    });
-
-    indexData = (idx.entries || []);
+    const idx = await fetchJson(base + "index.json");
+    indexData = idx.entries || [];
     rewardEntries = indexData.filter(e => e.category === "rewards");
 
     renderIndex();
@@ -412,7 +332,7 @@ function filteredEntries() {
   const q = norm(elQ.value);
   const c = norm(elCat.value);
 
-  let list = indexData || [];
+  let list = indexData.slice();
   if (c) list = list.filter(e => norm(e.category) === c);
 
   if (q) {
@@ -425,13 +345,12 @@ function filteredEntries() {
       return hay.includes(q);
     });
   }
-  elCount.textContent = `${list.length} shown / ${(indexData || []).length} total`;
+  elCount.textContent = `${list.length} shown / ${indexData.length} total`;
   return list;
 }
 
 function renderIndex() {
   const list = filteredEntries();
-
   elRows.innerHTML = list.map(e => `
     <tr data-id="${e.id}">
       <td><code>${e.id}</code></td>
@@ -446,149 +365,168 @@ function renderIndex() {
 }
 
 /* ---------------- selection ---------------- */
-
-async function fetchJson(url) {
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
-  return await r.json();
-}
-
-async function fetchText(url) {
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
-  return await r.text();
-}
-
-async function loadFragments(meta) {
-  const base = normalizeBaseUrl(elBase.value);
-  const out = [];
-  const frags = Array.isArray(meta.fragments) ? meta.fragments : [];
-  for (const f of frags) {
-    if (!f.path || !f.mergeInto) continue;
-    const text = await fetchText(base + f.path);
-    out.push({ mergeInto: f.mergeInto, text });
-  }
-  return out;
-}
-
 async function selectPreset(id) {
   const base = normalizeBaseUrl(elBase.value);
+  const entry = indexData.find(e => e.id === id);
+  if (!entry) return;
 
-  selected = (indexData || []).find(e => e.id === id);
-  if (!selected) return;
-
-  // We only want VoteSites selected here (your UI intent right now)
-  if (selected.category !== "votesites") {
-    elMerged.textContent = "Please select a VoteSites preset.";
+  if (entry.category !== "votesites") {
+    elMerged.textContent = "Please select a VoteSites preset (rewards are add-ons).";
     return;
   }
 
-  elSelTitle.textContent = `${selected.name} (${selected.id})`;
-  elMerged.textContent = "Loading preset...";
+  selectedVoteSiteEntry = entry;
+  elSelTitle.textContent = `${entry.name} (${entry.id})`;
+  elMerged.textContent = "Loading VoteSite preset...";
   elCopy.disabled = true;
 
+  rewardMetasById = {};
+  rewardValuesById = {};
+  elRewardForms.innerHTML = "";
+  elAddRewards.innerHTML = rewardEntries.map(e => `<option value="${e.id}">${e.name}</option>`).join("");
+
   try {
-    selectedMeta = await fetchJson(base + selected.metaPath);
-    placeholderValues = {};
-
-    buildPlaceholderForm();
-    buildAddonRewards();
-
+    selectedVoteSiteMeta = await fetchJson(base + entry.metaPath);
+    buildVoteSiteForm();
+    elAddRewards.onchange = onRewardsChanged;
     await rebuild();
   } catch (e) {
     elMerged.textContent = "Failed to load preset: " + (e.message || String(e));
   }
 }
 
-function buildPlaceholderForm() {
-  const ph = selectedMeta.placeholders || {};
-  elForm.innerHTML = "";
+function buildVoteSiteForm() {
+  const ph = selectedVoteSiteMeta.placeholders || {};
+  voteSiteValues = {};
+  elVoteSiteForm.innerHTML = "";
 
   for (const [k, spec] of Object.entries(ph)) {
-    const isMultiline = (k === "commands" || k === "messages");
-    const el = document.createElement(isMultiline ? "textarea" : "input");
-
+    const el = document.createElement("input");
     el.value = spec.default ?? "";
-    if (isMultiline) el.rows = 4;
+    voteSiteValues[k] = el.value;
 
     el.oninput = () => {
-      placeholderValues[k] = el.value;
+      voteSiteValues[k] = el.value;
       rebuild();
     };
-
-    placeholderValues[k] = el.value;
 
     const wrap = document.createElement("label");
     wrap.innerHTML = `<strong>${spec.label || k}</strong>`;
     wrap.appendChild(el);
-    elForm.appendChild(wrap);
+    elVoteSiteForm.appendChild(wrap);
   }
 }
 
-function buildAddonRewards() {
-  elAddRewards.innerHTML = rewardEntries.map(e =>
-    `<option value="${e.id}">${e.name}</option>`
-  ).join("");
+async function onRewardsChanged() {
+  // Load metas for selected rewards and build placeholder editors for each.
+  const base = normalizeBaseUrl(elBase.value);
+  elRewardForms.innerHTML = "";
 
-  elAddRewards.onchange = rebuild;
+  for (const opt of elAddRewards.selectedOptions) {
+    const rewardId = opt.value;
+    const entry = rewardEntries.find(r => r.id === rewardId);
+    if (!entry) continue;
+
+    if (!rewardMetasById[rewardId]) {
+      rewardMetasById[rewardId] = await fetchJson(base + entry.metaPath);
+    }
+
+    if (!rewardValuesById[rewardId]) {
+      // init defaults
+      rewardValuesById[rewardId] = {};
+      const ph = rewardMetasById[rewardId].placeholders || {};
+      for (const [k, spec] of Object.entries(ph)) {
+        rewardValuesById[rewardId][k] = spec.default ?? "";
+      }
+    }
+
+    renderRewardForm(rewardId, entry.name, rewardMetasById[rewardId]);
+  }
+
+  await rebuild();
+}
+
+function renderRewardForm(rewardId, displayName, meta) {
+  const ph = meta.placeholders || {};
+  const container = document.createElement("div");
+  container.className = "subcard";
+
+  container.innerHTML = `<div class="row" style="justify-content:space-between;">
+    <div><strong>${displayName}</strong><div class="muted" style="font-size:12px;">${rewardId}</div></div>
+  </div>`;
+
+  for (const [k, spec] of Object.entries(ph)) {
+    const isMultiline = (k === "commands" || k === "messages");
+    const el = document.createElement(isMultiline ? "textarea" : "input");
+    el.value = rewardValuesById[rewardId][k] ?? "";
+    if (isMultiline) el.rows = 4;
+
+    el.oninput = () => {
+      rewardValuesById[rewardId][k] = el.value;
+      rebuild();
+    };
+
+    const wrap = document.createElement("label");
+    wrap.innerHTML = `<strong>${spec.label || k}</strong>`;
+    wrap.appendChild(el);
+    container.appendChild(wrap);
+  }
+
+  elRewardForms.appendChild(container);
 }
 
 /* ---------------- merge build ---------------- */
-
 async function rebuild() {
-  if (!selectedMeta) return;
+  if (!selectedVoteSiteMeta) return;
 
   elMerged.textContent = "Building merged YAML...";
   elCopy.disabled = true;
 
-  const base = normalizeBaseUrl(elBase.value);
-
-  // Build derived placeholder blocks.
-  // IMPORTANT: indent = 0 here because we parse+render later,
-  // but we still need list items to be properly nested under Commands/Messages in fragment YAML.
-  // We'll generate with 2 spaces so that within the fragment:
-  // Commands:
-  //   - "..."
-  // and then merging + rendering keeps correct indentation.
-  const derived = { ...placeholderValues };
-  if (derived.commands != null) derived.commandsBlock = toYamlListBlock(derived.commands, 2);
-  if (derived.messages != null) derived.messagesBlock = toYamlListBlock(derived.messages, 2);
-
-  // We will merge into an object tree, using mergeInto paths.
   const tree = {};
-
   try {
-    // 1) main VoteSite preset fragments
-    const mainFrags = await loadFragments(selectedMeta);
+    // 1) Merge VoteSite fragments into VoteSites
+    const voteSiteDerived = { ...voteSiteValues };
+    const voteSiteFrags = await loadFragments(selectedVoteSiteMeta);
 
-    // 2) reward add-ons (inline rewards expected)
-    const rewardFrags = [];
+    for (const f of voteSiteFrags) {
+      const mergeInto = applyPlaceholders(f.mergeInto, voteSiteDerived).trim();
+      if (!mergeInto.startsWith("VoteSites")) continue;
+
+      const text = applyPlaceholders(f.text, voteSiteDerived).trim();
+      const obj = parseFragmentYaml(text);
+      mergeIntoPath(tree, mergeInto, obj);
+    }
+
+    // 2) Merge reward add-ons into VoteSites.<siteKey>.Rewards with EACH reward's placeholders
+    const baseMap = { ...voteSiteDerived }; // ensures <siteKey> works in mergeInto
+
     for (const opt of elAddRewards.selectedOptions) {
-      const entry = rewardEntries.find(r => r.id === opt.value);
-      if (!entry) continue;
-      const meta = await fetchJson(base + entry.metaPath);
-      rewardFrags.push(...await loadFragments(meta));
-    }
+      const rewardId = opt.value;
+      const meta = rewardMetasById[rewardId];
+      if (!meta) continue;
 
-    const all = [...mainFrags, ...rewardFrags];
+      const frags = await loadFragments(meta);
 
-    // Replace placeholders in BOTH mergeInto and fragment text, then parse and merge.
-    for (const f of all) {
-      const mergeIntoFilled = applyPlaceholders(f.mergeInto, derived).trim();
+      // Build derived placeholders for this reward preset
+      const rewardVals = rewardValuesById[rewardId] || {};
+      const rewardDerived = { ...rewardVals };
 
-      // For now we only implement VoteSites path merging.
-      // This makes adding VoteMilestones later trivial: allow that root too.
-      if (!mergeIntoFilled.startsWith("VoteSites")) {
-        continue;
+      if (rewardDerived.commands != null) rewardDerived.commandsBlock = toYamlListBlock(rewardDerived.commands, 2);
+      if (rewardDerived.messages != null) rewardDerived.messagesBlock = toYamlListBlock(rewardDerived.messages, 2);
+
+      // Apply placeholders using voteSite map + reward map + derived blocks
+      const mergedMap = { ...baseMap, ...rewardDerived };
+
+      for (const f of frags) {
+        const mergeInto = applyPlaceholders(f.mergeInto, mergedMap).trim();
+        if (!mergeInto.startsWith("VoteSites")) continue;
+
+        const text = applyPlaceholders(f.text, mergedMap).trim();
+        const obj = parseFragmentYaml(text);
+        mergeIntoPath(tree, mergeInto, obj);
       }
-
-      const fragmentYamlFilled = applyPlaceholders(f.text, derived).trim();
-      const fragmentObj = parseFragmentYaml(fragmentYamlFilled);
-
-      mergeIntoPath(tree, mergeIntoFilled, fragmentObj);
     }
 
-    // Render final YAML for VoteSites only (for now).
     const out = renderYaml(tree, 0);
     elMerged.textContent = out ? (out.trimEnd() + "\n") : "Nothing to output.";
     elCopy.disabled = false;
@@ -599,7 +537,6 @@ async function rebuild() {
 }
 
 /* ---------------- events ---------------- */
-
 document.getElementById("reloadBtn").onclick = loadIndex;
 elQ.addEventListener("input", renderIndex);
 elCat.addEventListener("change", renderIndex);
@@ -610,7 +547,6 @@ elCopy.onclick = async () => {
     elCopy.textContent = "Copied!";
     setTimeout(() => elCopy.textContent = "Copy", 900);
   } catch {
-    // fallback
     const ta = document.createElement("textarea");
     ta.value = elMerged.textContent;
     document.body.appendChild(ta);
