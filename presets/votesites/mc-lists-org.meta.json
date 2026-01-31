@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "id": "votesite:mc-lists-org",
+  "display": {
+    "name": "MC-Lists (generic)",
+    "description": "Generic MC-Lists VoteSite preset."
+  },
+  "match": {
+    "domains": [
+      "mc-lists.org",
+      "www.mc-lists.org"
+    ],
+    "keywords": [
+      "lists",
+      "mc-lists",
+      "org"
+    ]
+  },
+  "placeholders": {
+    "siteKey": {
+      "type": "string",
+      "label": "VoteSite key",
+      "default": "MC-Lists"
+    },
+    "displayName": {
+      "type": "string",
+      "label": "VoteSite display name",
+      "default": "MC-Lists"
+    },
+    "serviceSite": {
+      "type": "string",
+      "label": "ServiceSite",
+      "default": "MC-Lists"
+    },
+    "voteURL": {
+      "type": "string",
+      "label": "VoteURL",
+      "default": "ADD_VOTE_URL_LATER"
+    },
+    "voteDelay": {
+      "type": "string",
+      "label": "VoteDelay (blank = omit)",
+      "default": "24h"
+    },
+    "waitUntilVoteDelay": {
+      "type": "string",
+      "label": "WaitUntilVoteDelay (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDaily": {
+      "type": "string",
+      "label": "VoteDelayDaily (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDailyHour": {
+      "type": "string",
+      "label": "VoteDelayDailyHour (0\u201323, blank = omit)",
+      "default": ""
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/votesites/generic.votesites.yml",
+      "mergeInto": "VoteSites"
+    }
+  ],
+  "verified": false
+}

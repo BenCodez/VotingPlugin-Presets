@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "id": "votesite:minecraft-server-net",
+  "display": {
+    "name": "Minecraft-Server.net (generic)",
+    "description": "Generic Minecraft-Server.net VoteSite preset."
+  },
+  "match": {
+    "domains": [
+      "minecraft-server.net",
+      "www.minecraft-server.net"
+    ],
+    "keywords": [
+      "minecraft",
+      "minecraft-server.net",
+      "net",
+      "server"
+    ]
+  },
+  "placeholders": {
+    "siteKey": {
+      "type": "string",
+      "label": "VoteSite key",
+      "default": "Minecraft-Server.net"
+    },
+    "displayName": {
+      "type": "string",
+      "label": "VoteSite display name",
+      "default": "Minecraft-Server.net"
+    },
+    "serviceSite": {
+      "type": "string",
+      "label": "ServiceSite",
+      "default": "Minecraft-Server.net"
+    },
+    "voteURL": {
+      "type": "string",
+      "label": "VoteURL",
+      "default": "ADD_VOTE_URL_LATER"
+    },
+    "voteDelay": {
+      "type": "string",
+      "label": "VoteDelay (blank = omit)",
+      "default": "24h"
+    },
+    "waitUntilVoteDelay": {
+      "type": "string",
+      "label": "WaitUntilVoteDelay (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDaily": {
+      "type": "string",
+      "label": "VoteDelayDaily (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDailyHour": {
+      "type": "string",
+      "label": "VoteDelayDailyHour (0\u201323, blank = omit)",
+      "default": ""
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/votesites/generic.votesites.yml",
+      "mergeInto": "VoteSites"
+    }
+  ],
+  "verified": false
+}

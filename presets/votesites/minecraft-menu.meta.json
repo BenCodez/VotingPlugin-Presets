@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "id": "votesite:minecraft-menu",
+  "display": {
+    "name": "Minecraft Menu (generic)",
+    "description": "Generic Minecraft Menu VoteSite preset."
+  },
+  "match": {
+    "domains": [
+      "minecraft.menu",
+      "www.minecraft.menu"
+    ],
+    "keywords": [
+      "menu",
+      "minecraft",
+      "minecraft menu"
+    ]
+  },
+  "placeholders": {
+    "siteKey": {
+      "type": "string",
+      "label": "VoteSite key",
+      "default": "Minecraft Menu"
+    },
+    "displayName": {
+      "type": "string",
+      "label": "VoteSite display name",
+      "default": "Minecraft Menu"
+    },
+    "serviceSite": {
+      "type": "string",
+      "label": "ServiceSite",
+      "default": "Minecraft Menu"
+    },
+    "voteURL": {
+      "type": "string",
+      "label": "VoteURL",
+      "default": "ADD_VOTE_URL_LATER"
+    },
+    "voteDelay": {
+      "type": "string",
+      "label": "VoteDelay (blank = omit)",
+      "default": "24h"
+    },
+    "waitUntilVoteDelay": {
+      "type": "string",
+      "label": "WaitUntilVoteDelay (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDaily": {
+      "type": "string",
+      "label": "VoteDelayDaily (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDailyHour": {
+      "type": "string",
+      "label": "VoteDelayDailyHour (0\u201323, blank = omit)",
+      "default": ""
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/votesites/generic.votesites.yml",
+      "mergeInto": "VoteSites"
+    }
+  ],
+  "verified": false
+}

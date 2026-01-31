@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "id": "votesite:minestatus-net",
+  "display": {
+    "name": "minestatus.net (generic)",
+    "description": "Generic minestatus.net VoteSite preset."
+  },
+  "match": {
+    "domains": [
+      "minestatus.net",
+      "www.minestatus.net"
+    ],
+    "keywords": [
+      "minestatus",
+      "minestatus.net",
+      "net"
+    ]
+  },
+  "placeholders": {
+    "siteKey": {
+      "type": "string",
+      "label": "VoteSite key",
+      "default": "minestatus.net"
+    },
+    "displayName": {
+      "type": "string",
+      "label": "VoteSite display name",
+      "default": "minestatus.net"
+    },
+    "serviceSite": {
+      "type": "string",
+      "label": "ServiceSite",
+      "default": "minestatus.net"
+    },
+    "voteURL": {
+      "type": "string",
+      "label": "VoteURL",
+      "default": "ADD_VOTE_URL_LATER"
+    },
+    "voteDelay": {
+      "type": "string",
+      "label": "VoteDelay (blank = omit)",
+      "default": "24h"
+    },
+    "waitUntilVoteDelay": {
+      "type": "string",
+      "label": "WaitUntilVoteDelay (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDaily": {
+      "type": "string",
+      "label": "VoteDelayDaily (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDailyHour": {
+      "type": "string",
+      "label": "VoteDelayDailyHour (0\u201323, blank = omit)",
+      "default": ""
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/votesites/generic.votesites.yml",
+      "mergeInto": "VoteSites"
+    }
+  ],
+  "verified": false
+}

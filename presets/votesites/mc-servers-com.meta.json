@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "id": "votesite:mc-servers-com",
+  "display": {
+    "name": "MC-Servers.com (generic)",
+    "description": "Generic MC-Servers.com VoteSite preset."
+  },
+  "match": {
+    "domains": [
+      "mc-servers.com",
+      "www.mc-servers.com"
+    ],
+    "keywords": [
+      "com",
+      "mc-servers.com",
+      "servers"
+    ]
+  },
+  "placeholders": {
+    "siteKey": {
+      "type": "string",
+      "label": "VoteSite key",
+      "default": "MC-Servers.com"
+    },
+    "displayName": {
+      "type": "string",
+      "label": "VoteSite display name",
+      "default": "MC-Servers.com"
+    },
+    "serviceSite": {
+      "type": "string",
+      "label": "ServiceSite",
+      "default": "MC-Servers.com"
+    },
+    "voteURL": {
+      "type": "string",
+      "label": "VoteURL",
+      "default": "ADD_VOTE_URL_LATER"
+    },
+    "voteDelay": {
+      "type": "string",
+      "label": "VoteDelay (blank = omit)",
+      "default": "24h"
+    },
+    "waitUntilVoteDelay": {
+      "type": "string",
+      "label": "WaitUntilVoteDelay (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDaily": {
+      "type": "string",
+      "label": "VoteDelayDaily (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDailyHour": {
+      "type": "string",
+      "label": "VoteDelayDailyHour (0\u201323, blank = omit)",
+      "default": ""
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/votesites/generic.votesites.yml",
+      "mergeInto": "VoteSites"
+    }
+  ],
+  "verified": false
+}
