@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-01-31T17:55:33.403Z",
+  "entries": [
+    {
+      "id": "reward:inline:commands_only",
+      "category": "rewards",
+      "name": "Inline Reward: Commands only",
+      "description": "Adds Commands under VoteSites.<siteKey>.Rewards.",
+      "keywords": [
+        "commands",
+        "inline",
+        "no messages",
+        "reward"
+      ],
+      "domains": [],
+      "metaPath": "presets/rewards/inline_commands.meta.json",
+      "updatedAt": null,
+      "verified": true
+    },
+    {
+      "id": "reward:inline:messages_only",
+      "category": "rewards",
+      "name": "Inline Reward: Messages only",
+      "description": "Adds Messages under VoteSites.<siteKey>.Rewards.",
+      "keywords": [
+        "inline",
+        "messages",
+        "no commands",
+        "reward"
+      ],
+      "domains": [],
+      "metaPath": "presets/rewards/inline_messages.meta.json",
+      "updatedAt": null,
+      "verified": true
+    },
+    {
+      "id": "votesite:minecraft-server-list",
+      "category": "votesites",
+      "name": "Minecraft Server List (generic)",
+      "description": "Generic Minecraft Server List VoteSite preset.",
+      "keywords": [
+        "mcsl",
+        "minecraft server list"
+      ],
+      "domains": [
+        "votesite:minecraft-server-list"
+      ],
+      "metaPath": "presets/votesites/votesite:minecraft-server-list.meta.json",
+      "updatedAt": null,
+      "verified": false
+    },
+    {
+      "id": "votesite:pmc",
+      "category": "votesites",
+      "name": "PlanetMinecraft (generic)",
+      "description": "Generic PlanetMinecraft VoteSite preset with configurable vote delay behavior.",
+      "keywords": [
+        "planet minecraft",
+        "pmc"
+      ],
+      "domains": [
+        "planetminecraft.com"
+      ],
+      "metaPath": "presets/votesites/pmc.meta.json",
+      "updatedAt": null,
+      "verified": true
+    }
+  ]
+}
