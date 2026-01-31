@@ -26,6 +26,7 @@
     .list { max-height:420px; overflow:auto; }
     label { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
     .subcard { border:1px solid #eee; border-radius:10px; padding:10px; background:#fcfcfc; margin-top:10px; }
+    .hint { font-size:12px; color:#666; margin-top:4px; }
   </style>
 </head>
 
@@ -90,17 +91,18 @@
     <div class="split">
       <div>
         <div class="pill">VoteSite placeholders</div>
+        <div class="hint">Vote delay options are optional: leave blank to omit the YAML line.</div>
         <div id="votesiteForm" style="margin-top:8px;"></div>
       </div>
 
       <div>
         <div class="pill">Reward add-ons</div>
-        <div class="muted" style="font-size:12px; margin-top:6px;">
-          Reward fragments merge into <code>VoteSites.&lt;siteKey&gt;.Rewards</code>
-        </div>
+        <div class="hint">Rewards merge into <code>VoteSites.&lt;siteKey&gt;.Rewards</code></div>
+
         <select id="addonRewards" multiple size="7" style="width:100%; margin-top:8px;"></select>
 
         <div class="pill" style="margin-top:12px;">Reward placeholders</div>
+        <div class="hint">Each selected reward has its own placeholders.</div>
         <div id="rewardForms"></div>
       </div>
     </div>
@@ -138,7 +140,7 @@ function applyPlaceholders(text, values) {
   return out;
 }
 
-/* Minimal fragment parser (maps + lists) */
+/* Minimal fragment parser (maps + lists; enough for our preset fragments) */
 function parseFragmentYaml(yaml) {
   const lines = String(yaml || "").replace(/\t/g, "  ").split(/\r?\n/);
   while (lines.length && lines[0].trim() === "") lines.shift();
@@ -153,10 +155,7 @@ function parseFragmentYaml(yaml) {
     if (s === "true") return true;
     if (s === "false") return false;
     if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
-    // keep quoted values as string content
-    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-      return s.slice(1, -1);
-    }
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) return s.slice(1, -1);
     return s;
   }
 
@@ -171,10 +170,7 @@ function parseFragmentYaml(yaml) {
     const ctx = current();
 
     if (line.startsWith("- ")) {
-      if (ctx.type !== "list") {
-        // should not happen in our fragments if well-formed; ignore
-        continue;
-      }
+      if (ctx.type !== "list") continue;
       ctx.node.push(parseScalar(line.substring(2)));
       continue;
     }
@@ -253,15 +249,37 @@ function renderYaml(obj, indent = 0) {
   return `${pad}${String(obj)}`;
 }
 
+/* Build optional line placeholders for VoteSite delay settings */
+function buildVoteSiteLinePlaceholders(map) {
+  // VoteDelay (optional)
+  const vd = String(map.voteDelay ?? "").trim();
+  map.voteDelayLine = vd ? `VoteDelay: ${vd}` : "";
+
+  // WaitUntilVoteDelay (optional true/false)
+  const wuvd = String(map.waitUntilVoteDelay ?? "").trim().toLowerCase();
+  map.waitUntilVoteDelayLine =
+    (wuvd === "true" || wuvd === "false") ? `WaitUntilVoteDelay: ${wuvd}` : "";
+
+  // VoteDelayDaily (optional true/false)
+  const vdd = String(map.voteDelayDaily ?? "").trim().toLowerCase();
+  map.voteDelayDailyLine =
+    (vdd === "true" || vdd === "false") ? `VoteDelayDaily: ${vdd}` : "";
+
+  // VoteDelayDailyHour (optional integer)
+  const vddh = String(map.voteDelayDailyHour ?? "").trim();
+  map.voteDelayDailyHourLine =
+    (/^\d+$/.test(vddh) ? `VoteDelayDailyHour: ${vddh}` : "");
+}
+
 /* ---------------- state ---------------- */
 let indexData = [];
 let rewardEntries = [];
 let selectedVoteSiteEntry = null;
 let selectedVoteSiteMeta = null;
 
-let voteSiteValues = {};                 // placeholders for votesite
-let rewardMetasById = {};                // cache meta per reward id
-let rewardValuesById = {};               // placeholder values per reward id
+let voteSiteValues = {};          // placeholders for votesite
+let rewardMetasById = {};         // cache meta per reward id
+let rewardValuesById = {};        // placeholder values per reward id
 
 const elBase = document.getElementById("baseUrl");
 const elRows = document.getElementById("rows");
@@ -345,6 +363,7 @@ function filteredEntries() {
       return hay.includes(q);
     });
   }
+
   elCount.textContent = `${list.length} shown / ${indexData.length} total`;
   return list;
 }
@@ -383,12 +402,13 @@ async function selectPreset(id) {
   rewardMetasById = {};
   rewardValuesById = {};
   elRewardForms.innerHTML = "";
+
   elAddRewards.innerHTML = rewardEntries.map(e => `<option value="${e.id}">${e.name}</option>`).join("");
+  elAddRewards.onchange = onRewardsChanged;
 
   try {
     selectedVoteSiteMeta = await fetchJson(base + entry.metaPath);
     buildVoteSiteForm();
-    elAddRewards.onchange = onRewardsChanged;
     await rebuild();
   } catch (e) {
     elMerged.textContent = "Failed to load preset: " + (e.message || String(e));
@@ -418,10 +438,10 @@ function buildVoteSiteForm() {
 }
 
 async function onRewardsChanged() {
-  // Load metas for selected rewards and build placeholder editors for each.
   const base = normalizeBaseUrl(elBase.value);
   elRewardForms.innerHTML = "";
 
+  // Load metas and build placeholder editors for each selected reward.
   for (const opt of elAddRewards.selectedOptions) {
     const rewardId = opt.value;
     const entry = rewardEntries.find(r => r.id === rewardId);
@@ -432,7 +452,6 @@ async function onRewardsChanged() {
     }
 
     if (!rewardValuesById[rewardId]) {
-      // init defaults
       rewardValuesById[rewardId] = {};
       const ph = rewardMetasById[rewardId].placeholders || {};
       for (const [k, spec] of Object.entries(ph)) {
@@ -451,9 +470,12 @@ function renderRewardForm(rewardId, displayName, meta) {
   const container = document.createElement("div");
   container.className = "subcard";
 
-  container.innerHTML = `<div class="row" style="justify-content:space-between;">
-    <div><strong>${displayName}</strong><div class="muted" style="font-size:12px;">${rewardId}</div></div>
-  </div>`;
+  container.innerHTML = `
+    <div>
+      <strong>${displayName}</strong>
+      <div class="muted" style="font-size:12px;">${rewardId}</div>
+    </div>
+  `;
 
   for (const [k, spec] of Object.entries(ph)) {
     const isMultiline = (k === "commands" || k === "messages");
@@ -483,11 +505,15 @@ async function rebuild() {
   elCopy.disabled = true;
 
   const tree = {};
+
   try {
     // 1) Merge VoteSite fragments into VoteSites
     const voteSiteDerived = { ...voteSiteValues };
-    const voteSiteFrags = await loadFragments(selectedVoteSiteMeta);
 
+    // Build optional vote-delay YAML lines
+    buildVoteSiteLinePlaceholders(voteSiteDerived);
+
+    const voteSiteFrags = await loadFragments(selectedVoteSiteMeta);
     for (const f of voteSiteFrags) {
       const mergeInto = applyPlaceholders(f.mergeInto, voteSiteDerived).trim();
       if (!mergeInto.startsWith("VoteSites")) continue;
@@ -497,8 +523,8 @@ async function rebuild() {
       mergeIntoPath(tree, mergeInto, obj);
     }
 
-    // 2) Merge reward add-ons into VoteSites.<siteKey>.Rewards with EACH reward's placeholders
-    const baseMap = { ...voteSiteDerived }; // ensures <siteKey> works in mergeInto
+    // 2) Merge reward add-ons into VoteSites.<siteKey>.Rewards
+    const baseMap = { ...voteSiteDerived }; // ensures <siteKey> etc works in reward merge paths
 
     for (const opt of elAddRewards.selectedOptions) {
       const rewardId = opt.value;
@@ -507,14 +533,13 @@ async function rebuild() {
 
       const frags = await loadFragments(meta);
 
-      // Build derived placeholders for this reward preset
       const rewardVals = rewardValuesById[rewardId] || {};
       const rewardDerived = { ...rewardVals };
 
+      // Derived blocks for multiline reward placeholders
       if (rewardDerived.commands != null) rewardDerived.commandsBlock = toYamlListBlock(rewardDerived.commands, 2);
       if (rewardDerived.messages != null) rewardDerived.messagesBlock = toYamlListBlock(rewardDerived.messages, 2);
 
-      // Apply placeholders using voteSite map + reward map + derived blocks
       const mergedMap = { ...baseMap, ...rewardDerived };
 
       for (const f of frags) {
