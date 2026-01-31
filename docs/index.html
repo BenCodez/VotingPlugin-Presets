@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VotingPlugin Presets</title>
+  <title>VotingPlugin Presets (Local Scanner)</title>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 18px; }
     header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
@@ -35,6 +35,19 @@
   <button id="reloadBtn">Reload</button>
   <span id="status" class="muted"></span>
 </header>
+
+<script>
+  // Hide Pick Folder button in cloud/HTTP mode
+  (function () {
+    try {
+      if (location.protocol !== "file:") {
+        const btn = document.getElementById("pickFolderBtn");
+        if (btn) btn.style.display = "none";
+      }
+    } catch {}
+  })();
+</script>
+
 
 <div class="row" style="margin-top:10px;">
   <input id="q" size="34" placeholder="Search presets..." />
