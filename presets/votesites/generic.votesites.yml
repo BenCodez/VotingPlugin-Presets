@@ -1,29 +1,19 @@
 <siteKey>:
-  Enabled: <enabled>
+  Enabled: true
 
-  # Display name shown to players
   Name: "<displayName>"
-
-  # Internal service identifier
   ServiceSite: "<serviceSite>"
 
-  # Ordering / visibility
-  Priority: <priority>
-  Hidden: <hidden>
+  VoteURL: "<voteURL>"
 
-  # Vote link (can be filled later by search/resolve)
-  VoteURL: "<voteUrl>"
+  Priority: 5
+  Hidden: false
 
-  # Vote timing options
-  VoteDelay: <voteDelay>
-  WaitUntilVoteDelay: <waitUntilVoteDelay>
-  VoteDelayDaily: <voteDelayDaily>
-  #VoteDelayDailyHour: <voteDelayDailyHour>
+  <voteDelayLine>
+  <waitUntilVoteDelayLine>
+  <voteDelayDailyLine>
+  <voteDelayDailyHourLine>
 
-  # Force votes to be treated as offline
-  ForceOffline: <forceOffline>
-
-  # GUI display item
   DisplayItem:
-    Material: "<displayItemMaterial>"
-    Amount: <displayItemAmount>
+    Material: "DIAMOND"
+    Amount: 1
