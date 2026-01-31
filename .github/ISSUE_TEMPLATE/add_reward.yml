@@ -1,0 +1,46 @@
+name: "Add Reward preset"
+description: "Request a new reward preset (auto-generates a PR)."
+title: "Reward preset: <name>"
+labels: ["preset-request", "reward"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Reward presets are **inline** and merge into:
+        `VoteSites.<siteKey>.Rewards`
+
+        Choose a type and provide defaults.
+  - type: input
+    id: preset_id
+    attributes:
+      label: Preset ID
+      description: Must start with "reward:"
+      placeholder: reward:inline:commands_only
+    validations:
+      required: true
+  - type: input
+    id: display_name
+    attributes:
+      label: Display name
+      placeholder: Inline Reward: Commands only
+    validations:
+      required: true
+  - type: dropdown
+    id: reward_type
+    attributes:
+      label: Reward type
+      options:
+        - commands
+        - messages
+    validations:
+      required: true
+  - type: textarea
+    id: default_lines
+    attributes:
+      label: Default lines (one per line)
+      description: Commands or Messages, depending on reward type.
+      placeholder: |
+        eco give %player% 500
+        crate give %player% vote 1
+    validations:
+      required: true
