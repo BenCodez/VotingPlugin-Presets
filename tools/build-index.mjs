@@ -98,7 +98,7 @@ function inferCategory(metaPath) {
   const p = metaPath.replaceAll("\\", "/");
   if (p.includes("presets/votesites/")) return "votesites";
   if (p.includes("presets/rewards/")) return "rewards";
-  if (p.includes("presets/milestones/")) return "milestones";
+  if (p.includes("presets/votemilestones/")) return "votemilestones";
   if (p.includes("bundles/")) return "bundles";
   return "other";
 }
