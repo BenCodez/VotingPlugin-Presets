@@ -34,12 +34,6 @@
 
 <header>
   <h2 style="margin:0;">VotingPlugin Presets</h2>
-
-  <label class="small">
-    <span class="muted">Registry base URL</span>
-    <input id="baseUrl" size="48" />
-  </label>
-
   <button id="reloadBtn">Reload</button>
   <span id="status" class="muted"></span>
 </header>
@@ -114,161 +108,18 @@
 
 <script>
 /* ---------------- helpers ---------------- */
-function normalizeBaseUrl(url) {
-  let u = (url || "").trim();
-  if (!u.endsWith("/")) u += "/";
-  return u;
-}
 function norm(s) { return String(s || "").toLowerCase().trim(); }
 
-function toYamlListBlock(multiline, indentSpaces) {
-  const pad = " ".repeat(indentSpaces);
-  const lines = String(multiline || "")
-    .split(/\r?\n/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
-
-  if (!lines.length) return pad + "- \"\"";
-  return lines.map(l => `${pad}- "${l.replaceAll('"', '\\"')}"`).join("\n");
+async function fetchJson(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+  return r.json();
 }
 
-function applyPlaceholders(text, values) {
-  let out = text;
-  for (const [k, v] of Object.entries(values)) {
-    out = out.split(`<${k}>`).join(String(v));
-  }
-  return out;
-}
-
-/* Minimal fragment parser (maps + lists; enough for our preset fragments) */
-function parseFragmentYaml(yaml) {
-  const lines = String(yaml || "").replace(/\t/g, "  ").split(/\r?\n/);
-  while (lines.length && lines[0].trim() === "") lines.shift();
-  while (lines.length && lines[lines.length - 1].trim() === "") lines.pop();
-
-  const root = {};
-  const stack = [{ indent: -1, node: root, type: "map" }];
-
-  function current() { return stack[stack.length - 1]; }
-  function parseScalar(raw) {
-    const s = raw.trim();
-    if (s === "true") return true;
-    if (s === "false") return false;
-    if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
-    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) return s.slice(1, -1);
-    return s;
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const lineRaw = lines[i];
-    if (!lineRaw.trim() || lineRaw.trim().startsWith("#")) continue;
-
-    const indent = lineRaw.match(/^ */)[0].length;
-    const line = lineRaw.trim();
-
-    while (stack.length > 1 && indent <= current().indent) stack.pop();
-    const ctx = current();
-
-    if (line.startsWith("- ")) {
-      if (ctx.type !== "list") continue;
-      ctx.node.push(parseScalar(line.substring(2)));
-      continue;
-    }
-
-    const idx = line.indexOf(":");
-    if (idx === -1 || ctx.type !== "map") continue;
-
-    const key = line.substring(0, idx).trim();
-    const rest = line.substring(idx + 1).trim();
-
-    if (rest === "") {
-      // determine if next is list
-      let j = i + 1;
-      let next = null;
-      while (j < lines.length) {
-        const t = lines[j].trim();
-        if (t && !t.startsWith("#")) { next = lines[j].trim(); break; }
-        j++;
-      }
-      const nextIsList = next && next.startsWith("- ");
-      const child = nextIsList ? [] : {};
-      ctx.node[key] = child;
-      stack.push({ indent, node: child, type: nextIsList ? "list" : "map" });
-    } else {
-      ctx.node[key] = parseScalar(rest);
-    }
-  }
-  return root;
-}
-
-function deepMerge(target, source) {
-  if (Array.isArray(target) && Array.isArray(source)) return target.concat(source);
-  if (target && typeof target === "object" && !Array.isArray(target) &&
-      source && typeof source === "object" && !Array.isArray(source)) {
-    for (const [k, v] of Object.entries(source)) {
-      target[k] = (k in target) ? deepMerge(target[k], v) : v;
-    }
-    return target;
-  }
-  return source;
-}
-
-function mergeIntoPath(rootObj, pathStr, fragmentObj) {
-  const parts = pathStr.split(".").filter(p => p.length > 0);
-  if (!parts.length) return;
-
-  let cur = rootObj;
-  for (let i = 0; i < parts.length; i++) {
-    const p = parts[i];
-    const last = i === parts.length - 1;
-
-    if (last) {
-      cur[p] = (cur[p] == null) ? fragmentObj : deepMerge(cur[p], fragmentObj);
-    } else {
-      if (cur[p] == null || typeof cur[p] !== "object") cur[p] = {};
-      cur = cur[p];
-    }
-  }
-}
-
-function renderYaml(obj, indent = 0) {
-  const pad = " ".repeat(indent);
-  if (Array.isArray(obj)) {
-    return obj.map(v => `${pad}- "${String(v).replaceAll('"','\\"')}"`).join("\n");
-  }
-  if (obj && typeof obj === "object") {
-    return Object.keys(obj).map(k => {
-      const v = obj[k];
-      if (v && typeof v === "object") {
-        return `${pad}${k}:\n${renderYaml(v, indent + 2)}`;
-      }
-      if (typeof v === "string") return `${pad}${k}: "${v.replaceAll('"','\\"')}"`;
-      return `${pad}${k}: ${String(v)}`;
-    }).join("\n");
-  }
-  return `${pad}${String(obj)}`;
-}
-
-/* Build optional line placeholders for VoteSite delay settings */
-function buildVoteSiteLinePlaceholders(map) {
-  // VoteDelay (optional)
-  const vd = String(map.voteDelay ?? "").trim();
-  map.voteDelayLine = vd ? `VoteDelay: ${vd}` : "";
-
-  // WaitUntilVoteDelay (optional true/false)
-  const wuvd = String(map.waitUntilVoteDelay ?? "").trim().toLowerCase();
-  map.waitUntilVoteDelayLine =
-    (wuvd === "true" || wuvd === "false") ? `WaitUntilVoteDelay: ${wuvd}` : "";
-
-  // VoteDelayDaily (optional true/false)
-  const vdd = String(map.voteDelayDaily ?? "").trim().toLowerCase();
-  map.voteDelayDailyLine =
-    (vdd === "true" || vdd === "false") ? `VoteDelayDaily: ${vdd}` : "";
-
-  // VoteDelayDailyHour (optional integer)
-  const vddh = String(map.voteDelayDailyHour ?? "").trim();
-  map.voteDelayDailyHourLine =
-    (/^\d+$/.test(vddh) ? `VoteDelayDailyHour: ${vddh}` : "");
+async function fetchText(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+  return r.text();
 }
 
 /* ---------------- state ---------------- */
@@ -277,11 +128,6 @@ let rewardEntries = [];
 let selectedVoteSiteEntry = null;
 let selectedVoteSiteMeta = null;
 
-let voteSiteValues = {};          // placeholders for votesite
-let rewardMetasById = {};         // cache meta per reward id
-let rewardValuesById = {};        // placeholder values per reward id
-
-const elBase = document.getElementById("baseUrl");
 const elRows = document.getElementById("rows");
 const elMerged = document.getElementById("mergedOut");
 const elCopy = document.getElementById("copyBtn");
@@ -295,33 +141,6 @@ const elCount = document.getElementById("count");
 const elMsg = document.getElementById("msg");
 const elStatus = document.getElementById("status");
 
-/* ---------------- init base URL ---------------- */
-(function initBase() {
-  elBase.value = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, "/");
-})();
-
-/* ---------------- fetch helpers ---------------- */
-async function fetchJson(url) {
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
-  return await r.json();
-}
-async function fetchText(url) {
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
-  return await r.text();
-}
-async function loadFragments(meta) {
-  const base = normalizeBaseUrl(elBase.value);
-  const frags = Array.isArray(meta.fragments) ? meta.fragments : [];
-  const out = [];
-  for (const f of frags) {
-    if (!f.path || !f.mergeInto) continue;
-    out.push({ mergeInto: f.mergeInto, text: await fetchText(base + f.path) });
-  }
-  return out;
-}
-
 /* ---------------- load index ---------------- */
 async function loadIndex() {
   elMsg.textContent = "";
@@ -329,10 +148,8 @@ async function loadIndex() {
   elMerged.textContent = "Loading...";
   elCopy.disabled = true;
 
-  const base = normalizeBaseUrl(elBase.value);
-
   try {
-    const idx = await fetchJson(base + "index.json");
+    const idx = await fetchJson("index.json");
     indexData = idx.entries || [];
     rewardEntries = indexData.filter(e => e.category === "rewards");
 
@@ -385,7 +202,6 @@ function renderIndex() {
 
 /* ---------------- selection ---------------- */
 async function selectPreset(id) {
-  const base = normalizeBaseUrl(elBase.value);
   const entry = indexData.find(e => e.id === id);
   if (!entry) return;
 
@@ -399,165 +215,11 @@ async function selectPreset(id) {
   elMerged.textContent = "Loading VoteSite preset...";
   elCopy.disabled = true;
 
-  rewardMetasById = {};
-  rewardValuesById = {};
-  elRewardForms.innerHTML = "";
-
-  elAddRewards.innerHTML = rewardEntries.map(e => `<option value="${e.id}">${e.name}</option>`).join("");
-  elAddRewards.onchange = onRewardsChanged;
-
   try {
-    selectedVoteSiteMeta = await fetchJson(base + entry.metaPath);
-    buildVoteSiteForm();
-    await rebuild();
+    selectedVoteSiteMeta = await fetchJson(entry.metaPath);
+    elMerged.textContent = "VoteSite loaded. Select options.";
   } catch (e) {
     elMerged.textContent = "Failed to load preset: " + (e.message || String(e));
-  }
-}
-
-function buildVoteSiteForm() {
-  const ph = selectedVoteSiteMeta.placeholders || {};
-  voteSiteValues = {};
-  elVoteSiteForm.innerHTML = "";
-
-  for (const [k, spec] of Object.entries(ph)) {
-    const el = document.createElement("input");
-    el.value = spec.default ?? "";
-    voteSiteValues[k] = el.value;
-
-    el.oninput = () => {
-      voteSiteValues[k] = el.value;
-      rebuild();
-    };
-
-    const wrap = document.createElement("label");
-    wrap.innerHTML = `<strong>${spec.label || k}</strong>`;
-    wrap.appendChild(el);
-    elVoteSiteForm.appendChild(wrap);
-  }
-}
-
-async function onRewardsChanged() {
-  const base = normalizeBaseUrl(elBase.value);
-  elRewardForms.innerHTML = "";
-
-  // Load metas and build placeholder editors for each selected reward.
-  for (const opt of elAddRewards.selectedOptions) {
-    const rewardId = opt.value;
-    const entry = rewardEntries.find(r => r.id === rewardId);
-    if (!entry) continue;
-
-    if (!rewardMetasById[rewardId]) {
-      rewardMetasById[rewardId] = await fetchJson(base + entry.metaPath);
-    }
-
-    if (!rewardValuesById[rewardId]) {
-      rewardValuesById[rewardId] = {};
-      const ph = rewardMetasById[rewardId].placeholders || {};
-      for (const [k, spec] of Object.entries(ph)) {
-        rewardValuesById[rewardId][k] = spec.default ?? "";
-      }
-    }
-
-    renderRewardForm(rewardId, entry.name, rewardMetasById[rewardId]);
-  }
-
-  await rebuild();
-}
-
-function renderRewardForm(rewardId, displayName, meta) {
-  const ph = meta.placeholders || {};
-  const container = document.createElement("div");
-  container.className = "subcard";
-
-  container.innerHTML = `
-    <div>
-      <strong>${displayName}</strong>
-      <div class="muted" style="font-size:12px;">${rewardId}</div>
-    </div>
-  `;
-
-  for (const [k, spec] of Object.entries(ph)) {
-    const isMultiline = (k === "commands" || k === "messages");
-    const el = document.createElement(isMultiline ? "textarea" : "input");
-    el.value = rewardValuesById[rewardId][k] ?? "";
-    if (isMultiline) el.rows = 4;
-
-    el.oninput = () => {
-      rewardValuesById[rewardId][k] = el.value;
-      rebuild();
-    };
-
-    const wrap = document.createElement("label");
-    wrap.innerHTML = `<strong>${spec.label || k}</strong>`;
-    wrap.appendChild(el);
-    container.appendChild(wrap);
-  }
-
-  elRewardForms.appendChild(container);
-}
-
-/* ---------------- merge build ---------------- */
-async function rebuild() {
-  if (!selectedVoteSiteMeta) return;
-
-  elMerged.textContent = "Building merged YAML...";
-  elCopy.disabled = true;
-
-  const tree = {};
-
-  try {
-    // 1) Merge VoteSite fragments into VoteSites
-    const voteSiteDerived = { ...voteSiteValues };
-
-    // Build optional vote-delay YAML lines
-    buildVoteSiteLinePlaceholders(voteSiteDerived);
-
-    const voteSiteFrags = await loadFragments(selectedVoteSiteMeta);
-    for (const f of voteSiteFrags) {
-      const mergeInto = applyPlaceholders(f.mergeInto, voteSiteDerived).trim();
-      if (!mergeInto.startsWith("VoteSites")) continue;
-
-      const text = applyPlaceholders(f.text, voteSiteDerived).trim();
-      const obj = parseFragmentYaml(text);
-      mergeIntoPath(tree, mergeInto, obj);
-    }
-
-    // 2) Merge reward add-ons into VoteSites.<siteKey>.Rewards
-    const baseMap = { ...voteSiteDerived }; // ensures <siteKey> etc works in reward merge paths
-
-    for (const opt of elAddRewards.selectedOptions) {
-      const rewardId = opt.value;
-      const meta = rewardMetasById[rewardId];
-      if (!meta) continue;
-
-      const frags = await loadFragments(meta);
-
-      const rewardVals = rewardValuesById[rewardId] || {};
-      const rewardDerived = { ...rewardVals };
-
-      // Derived blocks for multiline reward placeholders
-      if (rewardDerived.commands != null) rewardDerived.commandsBlock = toYamlListBlock(rewardDerived.commands, 2);
-      if (rewardDerived.messages != null) rewardDerived.messagesBlock = toYamlListBlock(rewardDerived.messages, 2);
-
-      const mergedMap = { ...baseMap, ...rewardDerived };
-
-      for (const f of frags) {
-        const mergeInto = applyPlaceholders(f.mergeInto, mergedMap).trim();
-        if (!mergeInto.startsWith("VoteSites")) continue;
-
-        const text = applyPlaceholders(f.text, mergedMap).trim();
-        const obj = parseFragmentYaml(text);
-        mergeIntoPath(tree, mergeInto, obj);
-      }
-    }
-
-    const out = renderYaml(tree, 0);
-    elMerged.textContent = out ? (out.trimEnd() + "\n") : "Nothing to output.";
-    elCopy.disabled = false;
-
-  } catch (e) {
-    elMerged.textContent = "Failed to build YAML: " + (e.message || String(e));
   }
 }
 
@@ -567,20 +229,9 @@ elQ.addEventListener("input", renderIndex);
 elCat.addEventListener("change", renderIndex);
 
 elCopy.onclick = async () => {
-  try {
-    await navigator.clipboard.writeText(elMerged.textContent);
-    elCopy.textContent = "Copied!";
-    setTimeout(() => elCopy.textContent = "Copy", 900);
-  } catch {
-    const ta = document.createElement("textarea");
-    ta.value = elMerged.textContent;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    document.body.removeChild(ta);
-    elCopy.textContent = "Copied!";
-    setTimeout(() => elCopy.textContent = "Copy", 900);
-  }
+  await navigator.clipboard.writeText(elMerged.textContent);
+  elCopy.textContent = "Copied!";
+  setTimeout(() => elCopy.textContent = "Copy", 900);
 };
 
 loadIndex();
