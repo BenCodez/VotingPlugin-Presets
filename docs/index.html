@@ -1,33 +1,33 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VotingPlugin Presets</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>VotingPlugin Presets</title>
 
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 18px; }
-    header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    input, select, button, textarea { padding: 8px 10px; font-size: 14px; }
-    textarea { resize: vertical; }
-    button { cursor: pointer; }
-    .muted { color:#666; }
-    .error { color:#b00020; }
-    .layout { display:grid; grid-template-columns: 1.1fr 1fr; gap:14px; margin-top:14px; }
-    .card { border:1px solid #e6e6e6; border-radius:12px; padding:12px; background:#fff; }
-    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .pill { display:inline-block; padding:2px 8px; border:1px solid #ddd; border-radius:999px; font-size:12px; }
-    code { background:#f5f5f5; padding:2px 6px; border-radius:6px; }
-    pre { background:#0b1020; color:#d6e1ff; padding:12px; border-radius:10px; overflow:auto; max-height:520px; }
-    table { width:100%; border-collapse: collapse; }
-    th, td { border-bottom:1px solid #eee; padding:8px; text-align:left; vertical-align:top; }
-    th { background:#fafafa; position: sticky; top: 0; }
-    .split { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-    .list { max-height:420px; overflow:auto; }
-    label { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
-    .subcard { border:1px solid #eee; border-radius:10px; padding:10px; background:#fcfcfc; margin-top:10px; }
-    .hint { font-size:12px; color:#666; margin-top:4px; }
-  </style>
+<style>
+body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 18px; }
+header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+input, select, button, textarea { padding: 8px 10px; font-size: 14px; }
+textarea { resize: vertical; }
+button { cursor: pointer; }
+.muted { color:#666; }
+.error { color:#b00020; }
+.layout { display:grid; grid-template-columns: 1.1fr 1fr; gap:14px; margin-top:14px; }
+.card { border:1px solid #e6e6e6; border-radius:12px; padding:12px; background:#fff; }
+.row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.pill { display:inline-block; padding:2px 8px; border:1px solid #ddd; border-radius:999px; font-size:12px; }
+code { background:#f5f5f5; padding:2px 6px; border-radius:6px; }
+pre { background:#0b1020; color:#d6e1ff; padding:12px; border-radius:10px; overflow:auto; max-height:520px; }
+table { width:100%; border-collapse: collapse; }
+th, td { border-bottom:1px solid #eee; padding:8px; text-align:left; vertical-align:top; }
+th { background:#fafafa; position: sticky; top: 0; }
+.split { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+.list { max-height:420px; overflow:auto; }
+label { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+.subcard { border:1px solid #eee; border-radius:10px; padding:10px; background:#fcfcfc; margin-top:10px; }
+.hint { font-size:12px; color:#666; margin-top:4px; }
+</style>
 </head>
 
 <body>
@@ -53,159 +53,157 @@
 
 <div class="layout">
 
-  <!-- LEFT -->
-  <div class="card">
-    <div class="pill">Presets</div>
-    <div class="list" style="margin-top:8px;">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:30%;">ID</th>
-            <th style="width:18%;">Category</th>
-            <th>Name</th>
-          </tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
+<!-- LEFT -->
+<div class="card">
+  <div class="pill">Presets</div>
+  <div class="list" style="margin-top:8px;">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:30%;">ID</th>
+          <th style="width:18%;">Category</th>
+          <th>Name</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="card">
+  <div class="row" style="justify-content:space-between;">
+    <div>
+      <div class="pill">Merged YAML</div>
+      <div id="selTitle" class="muted">None</div>
     </div>
+    <button id="copyBtn" disabled>Copy</button>
   </div>
 
-  <!-- RIGHT -->
-  <div class="card">
-    <div class="row" style="justify-content:space-between;">
-      <div>
-        <div class="pill">Merged YAML</div>
-        <div id="selTitle" class="muted" style="margin-top:4px;">None</div>
-      </div>
-      <button id="copyBtn" disabled>Copy</button>
-    </div>
-
-    <hr style="border:none;border-top:1px solid #eee;margin:10px 0;" />
-
-    <div class="split">
-      <div>
-        <div class="pill">VoteSite placeholders</div>
-        <div class="hint">Vote delay options are optional.</div>
-        <div id="votesiteForm" style="margin-top:8px;"></div>
-      </div>
-
-      <div>
-        <div class="pill">Reward add-ons</div>
-        <div class="hint">Merged into <code>VoteSites.&lt;siteKey&gt;.Rewards</code></div>
-
-        <select id="addonRewards" multiple size="7" style="width:100%; margin-top:8px;"></select>
-
-        <div class="pill" style="margin-top:12px;">Reward placeholders</div>
-        <div id="rewardForms"></div>
-      </div>
-    </div>
-
-    <div id="yamlStatus" class="error" style="margin-top:10px; display:none;"></div>
-    <pre id="mergedOut" style="margin-top:10px;">Select a VoteSite preset.</pre>
-  </div>
+  <div id="yamlStatus" class="error" style="margin-top:10px; display:none;"></div>
+  <pre id="mergedOut" style="margin-top:10px;">Select a VoteSite preset.</pre>
+</div>
 
 </div>
 
-<!-- YAML parser -->
 <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
 
 <script>
-/* ---------------- helpers ---------------- */
-function norm(s) { return String(s || "").toLowerCase().trim(); }
+/* =====================================================
+   MODE DETECTION (HTTP vs file://)
+   ===================================================== */
+const isFileMode = location.protocol === "file:";
+let rootDirHandle = null;
 
-async function fetchJson(url) {
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
-  return r.json();
+/* =====================================================
+   FILE ACCESS (file:// only)
+   ===================================================== */
+async function pickRootFolder() {
+  rootDirHandle = await window.showDirectoryPicker();
 }
-async function fetchText(url) {
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+
+async function readLocalFile(path) {
+  if (!rootDirHandle) await pickRootFolder();
+
+  const parts = path.split("/").filter(Boolean);
+  let dir = rootDirHandle;
+
+  for (let i = 0; i < parts.length - 1; i++) {
+    dir = await dir.getDirectoryHandle(parts[i]);
+  }
+
+  const file = await (await dir.getFileHandle(parts.at(-1))).getFile();
+  return file.text();
+}
+
+/* =====================================================
+   FETCH ABSTRACTION
+   ===================================================== */
+async function fetchText(path) {
+  if (isFileMode) return readLocalFile(path);
+
+  const r = await fetch(path, { cache: "no-store" });
+  if (!r.ok) throw new Error(`HTTP ${r.status} for ${path}`);
   return r.text();
 }
 
-/* ---------------- yaml validation ---------------- */
+async function fetchJson(path) {
+  return JSON.parse(await fetchText(path));
+}
+
+/* =====================================================
+   YAML VALIDATION (silent unless error)
+   ===================================================== */
 const elYamlStatus = document.getElementById("yamlStatus");
 
 function clearYamlError() {
-  elYamlStatus.textContent = "";
   elYamlStatus.style.display = "none";
+  elYamlStatus.textContent = "";
 }
+
 function showYamlError(msg) {
-  elYamlStatus.textContent = msg;
   elYamlStatus.style.display = "block";
+  elYamlStatus.textContent = msg;
 }
+
 function shouldValidateYaml(text) {
   const s = String(text || "").trim();
-  return s && (s.includes(":") || s.startsWith("- "));
+  return s.includes(":") || s.startsWith("- ");
 }
-function validateYamlText(text) {
-  if (!window.jsyaml || !window.jsyaml.load) return true;
 
-  const s = String(text || "").trim();
-  if (!shouldValidateYaml(s)) {
+function validateYaml(text) {
+  if (!window.jsyaml || !shouldValidateYaml(text)) {
     clearYamlError();
     return true;
   }
-
   try {
-    window.jsyaml.load(s);
+    jsyaml.load(text);
     clearYamlError();
     return true;
-  } catch (err) {
-    const line = err?.mark?.line;
-    const col = err?.mark?.column;
-    const loc =
-      Number.isInteger(line) && Number.isInteger(col)
-        ? ` (line ${line + 1}, col ${col + 1})`
-        : "";
-    showYamlError(`Invalid YAML${loc}: ${err.message || String(err)}`);
+  } catch (e) {
+    const l = e?.mark?.line;
+    const c = e?.mark?.column;
+    const loc = (l != null && c != null) ? ` (line ${l+1}, col ${c+1})` : "";
+    showYamlError(`Invalid YAML${loc}: ${e.message}`);
     return false;
   }
 }
 
-/* ---------------- state ---------------- */
+/* =====================================================
+   STATE
+   ===================================================== */
 let indexData = [];
-let rewardEntries = [];
-let selectedVoteSiteMeta = null;
-
-let voteSiteValues = {};
-let rewardMetasById = {};
-let rewardValuesById = {};
 
 const elRows = document.getElementById("rows");
 const elMerged = document.getElementById("mergedOut");
 const elCopy = document.getElementById("copyBtn");
 const elSelTitle = document.getElementById("selTitle");
-const elVoteSiteForm = document.getElementById("votesiteForm");
-const elRewardForms = document.getElementById("rewardForms");
-const elAddRewards = document.getElementById("addonRewards");
 const elQ = document.getElementById("q");
 const elCat = document.getElementById("cat");
 const elCount = document.getElementById("count");
 const elMsg = document.getElementById("msg");
 const elStatus = document.getElementById("status");
 
-/* ---------------- load index ---------------- */
+/* =====================================================
+   LOAD INDEX
+   ===================================================== */
 async function loadIndex() {
-  elStatus.textContent = "Loading...";
   elMsg.textContent = "";
-  elMerged.textContent = "Loading...";
-  elCopy.disabled = true;
+  elStatus.textContent = isFileMode ? "Local file mode – select preset folder" : "Loading…";
 
   try {
-    const idx = await fetchJson("index.json");
-    indexData = idx.entries || [];
-    rewardEntries = indexData.filter(e => e.category === "rewards");
+    indexData = (await fetchJson("index.json")).entries || [];
     renderIndex();
     elStatus.textContent = `Loaded ${indexData.length} presets`;
-    elMerged.textContent = "Select a VoteSite preset.";
-    clearYamlError();
   } catch (e) {
-    elStatus.textContent = "";
     elMsg.textContent = e.message || String(e);
   }
 }
+
+/* =====================================================
+   FILTERING
+   ===================================================== */
+function norm(s) { return String(s||"").toLowerCase().trim(); }
 
 function filteredEntries() {
   const q = norm(elQ.value);
@@ -215,11 +213,10 @@ function filteredEntries() {
   if (c) list = list.filter(e => norm(e.category) === c);
   if (q) {
     list = list.filter(e =>
-      [e.id, e.name, e.category, ...(e.keywords || [])]
+      [e.id, e.category, e.name, ...(e.keywords||[])]
         .map(norm).join(" ").includes(q)
     );
   }
-
   elCount.textContent = `${list.length} shown / ${indexData.length} total`;
   return list;
 }
@@ -227,138 +224,17 @@ function filteredEntries() {
 function renderIndex() {
   const list = filteredEntries();
   elRows.innerHTML = list.map(e => `
-    <tr data-id="${e.id}">
+    <tr>
       <td><code>${e.id}</code></td>
       <td>${e.category}</td>
       <td>${e.name}</td>
     </tr>
   `).join("");
-
-  elRows.querySelectorAll("tr").forEach(tr =>
-    tr.onclick = () => selectPreset(tr.dataset.id)
-  );
 }
 
-/* ---------------- selection ---------------- */
-async function selectPreset(id) {
-  const entry = indexData.find(e => e.id === id);
-  if (!entry || entry.category !== "votesites") return;
-
-  elSelTitle.textContent = `${entry.name} (${entry.id})`;
-  elMerged.textContent = "Loading VoteSite preset...";
-  elCopy.disabled = true;
-
-  rewardMetasById = {};
-  rewardValuesById = {};
-  elRewardForms.innerHTML = "";
-
-  elAddRewards.innerHTML = rewardEntries.map(r =>
-    `<option value="${r.id}">${r.name}</option>`
-  ).join("");
-  elAddRewards.onchange = onRewardsChanged;
-
-  selectedVoteSiteMeta = await fetchJson(entry.metaPath);
-  buildVoteSiteForm();
-  await rebuild();
-}
-
-function buildVoteSiteForm() {
-  voteSiteValues = {};
-  elVoteSiteForm.innerHTML = "";
-
-  const ph = selectedVoteSiteMeta.placeholders || {};
-  for (const [k, spec] of Object.entries(ph)) {
-    const el = document.createElement("input");
-    el.value = spec.default ?? "";
-    voteSiteValues[k] = el.value;
-
-    el.oninput = () => {
-      voteSiteValues[k] = el.value;
-      rebuild();
-    };
-
-    const wrap = document.createElement("label");
-    wrap.innerHTML = `<strong>${spec.label || k}</strong>`;
-    wrap.appendChild(el);
-    elVoteSiteForm.appendChild(wrap);
-  }
-}
-
-async function onRewardsChanged() {
-  elRewardForms.innerHTML = "";
-
-  for (const opt of elAddRewards.selectedOptions) {
-    const id = opt.value;
-    const entry = rewardEntries.find(r => r.id === id);
-    if (!entry) continue;
-
-    if (!rewardMetasById[id]) {
-      rewardMetasById[id] = await fetchJson(entry.metaPath);
-    }
-
-    if (!rewardValuesById[id]) {
-      rewardValuesById[id] = {};
-      for (const [k, spec] of Object.entries(rewardMetasById[id].placeholders || {})) {
-        rewardValuesById[id][k] = spec.default ?? "";
-      }
-    }
-
-    renderRewardForm(id, entry.name, rewardMetasById[id]);
-  }
-
-  await rebuild();
-}
-
-function renderRewardForm(id, name, meta) {
-  const div = document.createElement("div");
-  div.className = "subcard";
-  div.innerHTML = `<strong>${name}</strong>`;
-
-  for (const [k, spec] of Object.entries(meta.placeholders || {})) {
-    const el = document.createElement("input");
-    el.value = rewardValuesById[id][k];
-
-    el.oninput = () => {
-      rewardValuesById[id][k] = el.value;
-      rebuild();
-    };
-
-    const wrap = document.createElement("label");
-    wrap.innerHTML = `<strong>${spec.label || k}</strong>`;
-    wrap.appendChild(el);
-    div.appendChild(wrap);
-  }
-
-  elRewardForms.appendChild(div);
-}
-
-/* ---------------- rebuild ---------------- */
-async function rebuild() {
-  if (!selectedVoteSiteMeta) return;
-
-  elMerged.textContent = "Building merged YAML...";
-  elCopy.disabled = true;
-
-  try {
-    const out = "# YAML output generated here\n";
-    elMerged.textContent = out;
-
-    let valid = true;
-    try {
-      valid = validateYamlText(out);
-    } catch {
-      valid = true;
-      clearYamlError();
-    }
-
-    elCopy.disabled = !valid;
-  } catch (e) {
-    showYamlError("Failed to build YAML");
-    elCopy.disabled = true;
-  }
-}
-
-/* ---------------- events ---------------- */
+/* =====================================================
+   EVENTS
+   ===================================================== */
 document.getElementById("reloadBtn").onclick = loadIndex;
 elQ.oninput = renderIndex;
 elCat.onchange = renderIndex;
@@ -366,7 +242,7 @@ elCat.onchange = renderIndex;
 elCopy.onclick = async () => {
   await navigator.clipboard.writeText(elMerged.textContent);
   elCopy.textContent = "Copied!";
-  setTimeout(() => elCopy.textContent = "Copy", 900);
+  setTimeout(() => elCopy.textContent = "Copy", 800);
 };
 
 loadIndex();
