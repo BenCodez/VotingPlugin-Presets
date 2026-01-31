@@ -4,592 +4,338 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>VotingPlugin Presets</title>
+
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 18px; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      margin: 18px;
+    }
     header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    input, select, button { padding: 8px 10px; font-size: 14px; }
+    input, select, button, textarea {
+      padding: 8px 10px;
+      font-size: 14px;
+    }
+    textarea { resize: vertical; }
     button { cursor: pointer; }
     .muted { color:#666; }
     .error { color:#b00020; }
-    .layout { display:grid; grid-template-columns: 1.1fr 1fr; gap:14px; margin-top: 14px; }
-    .card { border:1px solid #e6e6e6; border-radius:12px; padding:12px; background:#fff; }
+    .layout {
+      display:grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap:14px;
+      margin-top:14px;
+    }
+    .card {
+      border:1px solid #e6e6e6;
+      border-radius:12px;
+      padding:12px;
+      background:#fff;
+    }
     .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .pill { display:inline-block; padding:2px 8px; border:1px solid #ddd; border-radius:999px; font-size:12px; }
-    code { background:#f5f5f5; padding:2px 6px; border-radius:6px; }
-    pre { background:#0b1020; color:#d6e1ff; padding:12px; border-radius:10px; overflow:auto; max-height: 520px; }
+    .pill {
+      display:inline-block;
+      padding:2px 8px;
+      border:1px solid #ddd;
+      border-radius:999px;
+      font-size:12px;
+    }
+    code {
+      background:#f5f5f5;
+      padding:2px 6px;
+      border-radius:6px;
+    }
+    pre {
+      background:#0b1020;
+      color:#d6e1ff;
+      padding:12px;
+      border-radius:10px;
+      overflow:auto;
+      max-height:520px;
+    }
     table { width:100%; border-collapse: collapse; }
-    th, td { border-bottom:1px solid #eee; padding:8px; text-align:left; vertical-align:top; }
-    th { background:#fafafa; position: sticky; top: 0; }
-    a { text-decoration:none; }
-    a:hover { text-decoration: underline; }
-    .split { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-    .small { font-size: 12px; }
-    .list { max-height: 420px; overflow:auto; }
-    .selected { outline: 2px solid #3b82f6; border-radius: 10px; }
+    th, td {
+      border-bottom:1px solid #eee;
+      padding:8px;
+      text-align:left;
+      vertical-align:top;
+    }
+    th {
+      background:#fafafa;
+      position: sticky;
+      top: 0;
+    }
+    .split {
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .list { max-height:420px; overflow:auto; }
+    .selected { outline:2px solid #3b82f6; border-radius:8px; }
     label { display:flex; flex-direction:column; gap:4px; }
   </style>
 </head>
+
 <body>
-  <header>
-    <h2 style="margin:0;">VotingPlugin Presets</h2>
 
-    <label class="small">
-      <span class="muted">Registry base URL</span>
-      <input id="baseUrl" size="48" placeholder="https://<user>.github.io/<repo>/" />
-    </label>
+<header>
+  <h2 style="margin:0;">VotingPlugin Presets</h2>
 
-    <button id="reloadBtn">Reload</button>
-    <span id="status" class="muted"></span>
-  </header>
+  <label class="small">
+    <span class="muted">Registry base URL</span>
+    <input id="baseUrl" size="48" />
+  </label>
 
-  <div class="row" style="margin-top:10px;">
-    <input id="q" size="34" placeholder="Search (id, name, keyword, domain)..." />
-    <select id="cat">
-      <option value="">All categories</option>
-      <option value="votesites">VoteSites</option>
-      <option value="rewards">Rewards</option>
-      <option value="milestones">VoteMilestones</option>
-      <option value="bundles">Bundles</option>
-      <option value="other">Other</option>
-    </select>
-    <label class="row small" style="align-items:center;">
-      <input type="checkbox" id="verifiedOnly" />
-      <span class="muted">Verified only</span>
-    </label>
-    <span class="muted" id="count"></span>
+  <button id="reloadBtn">Reload</button>
+  <span id="status" class="muted"></span>
+</header>
+
+<div class="row" style="margin-top:10px;">
+  <input id="q" size="34" placeholder="Search presets..." />
+  <select id="cat">
+    <option value="">All</option>
+    <option value="votesites">VoteSites</option>
+    <option value="rewards">Rewards</option>
+    <option value="milestones">VoteMilestones</option>
+  </select>
+  <span class="muted" id="count"></span>
+</div>
+
+<div id="msg" class="error" style="margin-top:10px;"></div>
+
+<div class="layout">
+
+  <!-- LEFT -->
+  <div class="card">
+    <div class="pill">Presets</div>
+    <div class="list" style="margin-top:8px;">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Category</th>
+            <th>Name</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
   </div>
 
-  <div id="msg" class="error" style="margin-top:10px;"></div>
+  <!-- RIGHT -->
+  <div class="card">
+    <div class="row" style="justify-content:space-between;">
+      <div>
+        <div class="pill">Merged YAML</div>
+        <div id="selTitle" class="muted" style="margin-top:4px;">None</div>
+      </div>
+      <button id="copyBtn" disabled>Copy</button>
+    </div>
 
-  <div class="layout">
-    <!-- LEFT: search results -->
-    <div class="card">
-      <div class="row" style="justify-content:space-between;">
-        <div class="row">
-          <span class="pill">Index</span>
-          <span class="muted small">Click a preset to view YAML + merge options</span>
-        </div>
+    <hr style="border:none;border-top:1px solid #eee;margin:10px 0;" />
+
+    <div class="split">
+      <div>
+        <div class="pill">Placeholders</div>
+        <div id="placeholderForm" style="margin-top:8px;"></div>
       </div>
 
-      <div class="list" style="margin-top:10px;">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:28%;">ID</th>
-              <th style="width:16%;">Category</th>
-              <th>Name</th>
-              <th style="width:14%;">Updated</th>
-            </tr>
-          </thead>
-          <tbody id="rows"></tbody>
-        </table>
+      <div>
+        <div class="pill">Add reward examples</div>
+        <select id="addonRewards" multiple size="8" style="width:100%; margin-top:8px;"></select>
       </div>
     </div>
 
-    <!-- RIGHT: preset detail + merge output -->
-    <div class="card">
-      <div class="row" style="justify-content:space-between;">
-        <div>
-          <div class="row">
-            <span class="pill">Selected</span>
-            <span id="selTitle" class="muted">None</span>
-          </div>
-          <div id="selDesc" class="muted small" style="margin-top:4px;"></div>
-        </div>
-        <button id="copyMergedBtn" disabled>Copy merged YAML</button>
-      </div>
-
-      <hr style="border:none;border-top:1px solid #eee;margin:10px 0;" />
-
-      <div class="split">
-        <div>
-          <div class="row" style="justify-content:space-between;">
-            <span class="pill">Placeholders</span>
-            <button id="resetPlaceholdersBtn" disabled>Reset</button>
-          </div>
-          <div id="placeholderForm" class="small" style="margin-top:8px;"></div>
-        </div>
-
-        <div>
-          <div class="row" style="justify-content:space-between;">
-            <span class="pill">Add-ons</span>
-            <span class="muted small">Pick extra rewards/milestones to merge</span>
-          </div>
-
-          <div class="row small" style="margin-top:8px;">
-            <label style="flex:1;">
-              <span class="muted">Add reward presets</span>
-              <select id="addonRewards" multiple size="7" style="width:100%; padding:8px;">
-              </select>
-            </label>
-
-            <label style="flex:1;">
-              <span class="muted">Add milestone presets</span>
-              <select id="addonMilestones" multiple size="7" style="width:100%; padding:8px;">
-              </select>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div class="row" style="margin-top:10px; justify-content:space-between;">
-        <div class="row">
-          <span class="pill">Merged output</span>
-          <span class="muted small">Grouped by VoteSites / Rewards / VoteMilestones</span>
-        </div>
-        <button id="rebuildBtn" disabled>Rebuild</button>
-      </div>
-
-      <pre id="mergedOut" style="margin-top:8px;">Select a preset to see merged YAML.</pre>
-    </div>
+    <pre id="mergedOut" style="margin-top:10px;">Select a preset.</pre>
   </div>
+
+</div>
 
 <script>
-  // ---------- helpers ----------
-  function normalizeBaseUrl(url) {
-    let u = (url || "").trim();
-    if (!u) return "";
-    if (!u.endsWith("/")) u += "/";
-    return u;
+/* ---------------- helpers ---------------- */
+
+function normalizeBaseUrl(url) {
+  let u = (url || "").trim();
+  if (!u.endsWith("/")) u += "/";
+  return u;
+}
+
+function toYamlListBlock(multiline, indentSpaces) {
+  const pad = " ".repeat(indentSpaces);
+  const lines = String(multiline || "")
+    .split(/\r?\n/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
+  if (!lines.length) return pad + "- \"\"";
+
+  return lines.map(l => `${pad}- "${l.replaceAll('"', '\\"')}"`).join("\n");
+}
+
+function applyPlaceholders(text, values) {
+  let out = text;
+  for (const [k, v] of Object.entries(values)) {
+    out = out.split(`<${k}>`).join(String(v));
   }
-
-  function normText(s) {
-    return (s || "").toString().toLowerCase().trim();
-  }
-
-  function safeArr(v) {
-    return Array.isArray(v) ? v.filter(x => typeof x === "string") : [];
-  }
-
-  function fmtDate(iso) {
-    if (!iso) return "";
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    return d.toISOString().slice(0, 10);
-  }
-
-  function indentYaml(yaml, spaces) {
-    const pad = " ".repeat(spaces);
-    return yaml.split("\n").map(line => line.length ? pad + line : line).join("\n");
-  }
-
-  function unique(arr) {
-    return Array.from(new Set(arr));
-  }
-
-  async function fetchJson(url) {
-    const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
-    return await r.json();
-  }
-
-  async function fetchText(url) {
-    const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
-    return await r.text();
-  }
-
-  function applyPlaceholders(text, values) {
-    let out = text;
-    for (const [k, v] of Object.entries(values)) {
-      const token = `<${k}>`;
-      out = out.split(token).join(String(v));
-    }
-    return out;
-  }
-
-  function buildDefaultPlaceholderValues(meta) {
-    const defs = meta && meta.placeholders ? meta.placeholders : {};
-    const out = {};
-    for (const [k, spec] of Object.entries(defs)) {
-      if (spec && Object.prototype.hasOwnProperty.call(spec, "default")) {
-        out[k] = spec.default;
-      }
-    }
-    return out;
-  }
-
-  function buildPlaceholderForm(meta, values, onChange) {
-    const defs = meta && meta.placeholders ? meta.placeholders : {};
-    const keys = Object.keys(defs);
-
-    if (!keys.length) {
-      return `<div class="muted">No placeholders.</div>`;
-    }
-
-    return keys.map(k => {
-      const spec = defs[k] || {};
-      const type = spec.type || "string";
-      const label = spec.label || k;
-      const example = spec.example != null ? `Example: ${spec.example}` : "";
-      const required = spec.required === true ? " (required)" : "";
-      const val = values[k] != null ? values[k] : "";
-
-      // Use <input> for most types; keep it simple.
-      const inputType = (type === "number") ? "number" : "text";
-
-      return `
-        <label style="margin-bottom:10px;">
-          <span><strong>${label}</strong><span class="muted">${required}</span></span>
-          <input data-ph="${k}" type="${inputType}" value="${String(val).replaceAll('"','&quot;')}" />
-          <span class="muted small">${type}${example ? " • " + example : ""}</span>
-        </label>
-      `;
-    }).join("");
-  }
-
-  function parseInputByType(raw, type) {
-    if (type === "boolean") {
-      const s = String(raw).trim().toLowerCase();
-      if (s === "true") return true;
-      if (s === "false") return false;
-      // fallback: keep raw as-is to avoid breaking
-      return raw;
-    }
-    if (type === "number") {
-      const n = Number(raw);
-      return Number.isFinite(n) ? n : raw;
-    }
-    // duration/string -> keep as string
-    return raw;
-  }
-
-  function sectionWrapper(mergeInto, childYaml) {
-    // Your fragments are "children under section", so wrap them.
-    // Example:
-    // VoteSites:
-    //   PMC:
-    //     ...
-    return `${mergeInto}:\n${indentYaml(childYaml.trimEnd(), 2)}\n`;
-  }
-
-  // ---------- state ----------
-  let currentBase = "";
-  let indexData = null;
-  let selectedEntry = null;
-  let selectedMeta = null;
-
-  // placeholder values per selected preset
-  let placeholderValues = {};
-
-  // loaded index entries by category for add-ons
-  let rewardsEntries = [];
-  let milestonesEntries = [];
-
-  const elBase = document.getElementById("baseUrl");
-  const elReload = document.getElementById("reloadBtn");
-  const elStatus = document.getElementById("status");
-  const elMsg = document.getElementById("msg");
-  const elRows = document.getElementById("rows");
-  const elQ = document.getElementById("q");
-  const elCat = document.getElementById("cat");
-  const elVerified = document.getElementById("verifiedOnly");
-  const elCount = document.getElementById("count");
-
-  const elSelTitle = document.getElementById("selTitle");
-  const elSelDesc = document.getElementById("selDesc");
-  const elPlaceholderForm = document.getElementById("placeholderForm");
-  const elResetPH = document.getElementById("resetPlaceholdersBtn");
-
-  const elAddonRewards = document.getElementById("addonRewards");
-  const elAddonMilestones = document.getElementById("addonMilestones");
-
-  const elMerged = document.getElementById("mergedOut");
-  const elCopyMerged = document.getElementById("copyMergedBtn");
-  const elRebuild = document.getElementById("rebuildBtn");
-
-  // Default base URL that works with GitHub Pages repo paths
-  (function initBaseDefault() {
-    // e.g. https://bencodez.github.io/VotingPlugin-Presets/index.html
-    // We want https://bencodez.github.io/VotingPlugin-Presets/
-    const base = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, "/");
-    elBase.value = base;
-  })();
-
-  function applyFilters(entries) {
-    const q = normText(elQ.value);
-    const cat = normText(elCat.value);
-    const verifiedOnly = elVerified.checked;
-
-    return entries.filter(e => {
-      if (cat && normText(e.category) !== cat) return false;
-      if (verifiedOnly && e.verified !== true) return false;
-      if (!q) return true;
-
-      const hay = [
-        e.id, e.category, e.name, e.description,
-        ...safeArr(e.domains),
-        ...safeArr(e.keywords)
-      ].map(normText).join(" ");
-      return hay.includes(q);
-    });
-  }
-
-  function renderIndex(entries) {
-    const filtered = applyFilters(entries);
-    elCount.textContent = `${filtered.length} shown / ${entries.length} total`;
-
-    elRows.innerHTML = filtered.map(e => {
-      const updated = fmtDate(e.updatedAt || "");
-      const verified = e.verified === true ? " ✅" : "";
-      const isSel = selectedEntry && selectedEntry.id === e.id;
-
-      return `
-        <tr class="${isSel ? "selected" : ""}" data-id="${e.id}">
-          <td><code>${e.id}</code></td>
-          <td><span class="pill">${e.category || "other"}</span>${verified}</td>
-          <td>${e.name || ""}</td>
-          <td>${updated || ""}</td>
-        </tr>
-      `;
-    }).join("");
-
-    // Click handler
-    Array.from(elRows.querySelectorAll("tr[data-id]")).forEach(tr => {
-      tr.addEventListener("click", async () => {
-        const id = tr.getAttribute("data-id");
-        const entry = entries.find(x => x.id === id);
-        if (entry) {
-          await selectPreset(entry);
-          renderIndex(entries);
-        }
-      });
-    });
-  }
-
-  function populateAddons() {
-    // rewards + milestones multi-select
-    elAddonRewards.innerHTML = rewardsEntries.map(e => `<option value="${e.id}">${e.name} (${e.id})</option>`).join("");
-    elAddonMilestones.innerHTML = milestonesEntries.map(e => `<option value="${e.id}">${e.name} (${e.id})</option>`).join("");
-  }
-
-  function getSelectedOptions(selectEl) {
-    return Array.from(selectEl.selectedOptions).map(o => o.value);
-  }
-
-  async function loadMeta(entry) {
-    const url = currentBase + entry.metaPath;
-    return await fetchJson(url);
-  }
-
-  async function loadFragments(meta) {
-    const fragments = Array.isArray(meta.fragments) ? meta.fragments : [];
-    const loaded = [];
-    for (const f of fragments) {
-      const mergeInto = f.mergeInto;
-      const path = f.path;
-      if (!mergeInto || !path) continue;
-      const text = await fetchText(currentBase + path);
-      loaded.push({ mergeInto, path, text });
-    }
-    return loaded;
-  }
-
-  async function selectPreset(entry) {
-    selectedEntry = entry;
-    selectedMeta = null;
-    placeholderValues = {};
-    elAddonRewards.value = "";
-    elAddonMilestones.value = "";
-
-    elSelTitle.textContent = `${entry.name} (${entry.id})`;
-    elSelDesc.textContent = entry.description || "";
-
-    elMsg.textContent = "";
-    elMerged.textContent = "Loading preset...";
-    elCopyMerged.disabled = true;
-    elRebuild.disabled = true;
-    elResetPH.disabled = true;
-
-    try {
-      const meta = await loadMeta(entry);
-      selectedMeta = meta;
-
-      placeholderValues = buildDefaultPlaceholderValues(meta);
-
-      // Render placeholder form
-      elPlaceholderForm.innerHTML = buildPlaceholderForm(meta, placeholderValues);
-      wirePlaceholderInputs(meta);
-
-      elResetPH.disabled = false;
-      elRebuild.disabled = false;
-
-      // Rebuild immediately
-      await rebuildMerged();
-    } catch (err) {
-      elMerged.textContent = "Failed to load preset: " + (err.message || String(err));
-    }
-  }
-
-  function wirePlaceholderInputs(meta) {
-    const defs = meta && meta.placeholders ? meta.placeholders : {};
-
-    Array.from(elPlaceholderForm.querySelectorAll("input[data-ph]")).forEach(inp => {
-      inp.addEventListener("input", () => {
-        const key = inp.getAttribute("data-ph");
-        const spec = defs[key] || {};
-        const type = spec.type || "string";
-        placeholderValues[key] = parseInputByType(inp.value, type);
-      });
-    });
-  }
-
-  async function buildYamlForPreset(entry, metaOverrideValues = null) {
-    const meta = await loadMeta(entry);
-    const baseValues = buildDefaultPlaceholderValues(meta);
-    const vals = Object.assign({}, baseValues, metaOverrideValues || {});
-    const frags = await loadFragments(meta);
-
-    // Apply placeholders to each fragment
-    return frags.map(f => ({
-      mergeInto: f.mergeInto,
-      path: f.path,
-      yaml: applyPlaceholders(f.text, vals)
-    }));
-  }
-
-  async function rebuildMerged() {
-    if (!selectedEntry || !selectedMeta) return;
-
-    elMerged.textContent = "Building merged YAML...";
-    elCopyMerged.disabled = true;
-
-    try {
-      // 1) selected preset fragments (use user-edited placeholder values)
-      const selectedFrags = (await buildYamlForPreset(selectedEntry, placeholderValues));
-
-      // 2) add-on reward presets
-      const addonRewardIds = getSelectedOptions(elAddonRewards);
-      const addonRewards = [];
-      for (const id of addonRewardIds) {
-        const e = rewardsEntries.find(x => x.id === id);
-        if (e) addonRewards.push(...(await buildYamlForPreset(e)));
-      }
-
-      // 3) add-on milestone presets
-      const addonMilestoneIds = getSelectedOptions(elAddonMilestones);
-      const addonMilestones = [];
-      for (const id of addonMilestoneIds) {
-        const e = milestonesEntries.find(x => x.id === id);
-        if (e) addonMilestones.push(...(await buildYamlForPreset(e)));
-      }
-
-      const allFrags = [...selectedFrags, ...addonRewards, ...addonMilestones];
-
-      // Group by mergeInto
-      const groups = {};
-      for (const f of allFrags) {
-        if (!groups[f.mergeInto]) groups[f.mergeInto] = [];
-        groups[f.mergeInto].push(f.yaml.trimEnd());
-      }
-
-      // Build merged output in stable order
-      const order = ["VoteSites", "Rewards", "VoteMilestones"];
-      const parts = [];
-
-      for (const sec of order) {
-        if (!groups[sec] || !groups[sec].length) continue;
-
-        // Join child YAML blocks with spacing
-        const childJoined = groups[sec].join("\n\n");
-        parts.push(sectionWrapper(sec, childJoined));
-      }
-
-      if (!parts.length) {
-        elMerged.textContent = "No fragments to merge.";
-        return;
-      }
-
-      const merged = parts.join("\n");
-      elMerged.textContent = merged.trimEnd() + "\n";
-
-      elCopyMerged.disabled = false;
-    } catch (err) {
-      elMerged.textContent = "Failed to build merged YAML: " + (err.message || String(err));
-    }
-  }
-
-  async function copyText(text) {
-    try {
-      await navigator.clipboard.writeText(text);
-      elStatus.textContent = "Copied!";
-      setTimeout(() => elStatus.textContent = "", 1200);
-    } catch {
-      // fallback
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      elStatus.textContent = "Copied!";
-      setTimeout(() => elStatus.textContent = "", 1200);
-    }
-  }
-
-  async function loadIndex() {
-    elMsg.textContent = "";
-    elStatus.textContent = "Loading...";
-    indexData = null;
-    selectedEntry = null;
-    selectedMeta = null;
-    elMerged.textContent = "Select a preset to see merged YAML.";
-    elCopyMerged.disabled = true;
-    elRebuild.disabled = true;
-    elResetPH.disabled = true;
-    elPlaceholderForm.innerHTML = "";
-    elSelTitle.textContent = "None";
-    elSelDesc.textContent = "";
-
-    currentBase = normalizeBaseUrl(elBase.value);
-    if (!currentBase) {
-      elStatus.textContent = "";
-      elMsg.textContent = "Please enter a registry base URL.";
-      return;
-    }
-
-    try {
-      // index.json is generated into docs/ by your workflow, so it exists at site root.
-      const idx = await fetchJson(currentBase + "index.json");
-      if (!idx || !Array.isArray(idx.entries)) throw new Error("index.json missing 'entries' array");
-
-      indexData = idx;
-
-      rewardsEntries = idx.entries.filter(e => normText(e.category) === "rewards");
-      milestonesEntries = idx.entries.filter(e => normText(e.category) === "milestones");
-
-      populateAddons();
-
-      elStatus.textContent = `Loaded (schema v${idx.schemaVersion || "?"}, ${idx.entries.length} presets)`;
-      renderIndex(idx.entries);
-    } catch (err) {
-      elStatus.textContent = "";
-      elMsg.textContent = err.message || String(err);
-    }
-  }
-
-  // ---------- events ----------
-  elReload.addEventListener("click", loadIndex);
-  [elQ, elCat, elVerified].forEach(el => el.addEventListener("input", () => {
-    if (indexData) renderIndex(indexData.entries);
-  }));
-
-  elRebuild.addEventListener("click", rebuildMerged);
-  elAddonRewards.addEventListener("change", rebuildMerged);
-  elAddonMilestones.addEventListener("change", rebuildMerged);
-
-  elCopyMerged.addEventListener("click", () => copyText(elMerged.textContent));
-
-  elResetPH.addEventListener("click", async () => {
-    if (!selectedMeta) return;
-    placeholderValues = buildDefaultPlaceholderValues(selectedMeta);
-    elPlaceholderForm.innerHTML = buildPlaceholderForm(selectedMeta, placeholderValues);
-    wirePlaceholderInputs(selectedMeta);
-    await rebuildMerged();
+  return out;
+}
+
+function sectionWrap(name, content) {
+  return `${name}:\n${content.split("\n").map(l => "  " + l).join("\n")}`;
+}
+
+/* ---------------- state ---------------- */
+
+let indexData = null;
+let selected = null;
+let selectedMeta = null;
+let rewardEntries = [];
+let placeholderValues = {};
+
+const elBase = document.getElementById("baseUrl");
+const elRows = document.getElementById("rows");
+const elMerged = document.getElementById("mergedOut");
+const elCopy = document.getElementById("copyBtn");
+const elSelTitle = document.getElementById("selTitle");
+const elForm = document.getElementById("placeholderForm");
+const elAddRewards = document.getElementById("addonRewards");
+
+/* ---------------- load index ---------------- */
+
+(function initBase() {
+  elBase.value = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, "/");
+})();
+
+async function loadIndex() {
+  elMerged.textContent = "Loading...";
+  const base = normalizeBaseUrl(elBase.value);
+
+  const idx = await fetch(base + "index.json").then(r => r.json());
+  indexData = idx.entries;
+  rewardEntries = indexData.filter(e => e.category === "rewards");
+
+  renderIndex();
+}
+
+function renderIndex() {
+  elRows.innerHTML = indexData.map(e => `
+    <tr data-id="${e.id}">
+      <td><code>${e.id}</code></td>
+      <td>${e.category}</td>
+      <td>${e.name}</td>
+    </tr>
+  `).join("");
+
+  elRows.querySelectorAll("tr").forEach(tr => {
+    tr.onclick = () => selectPreset(tr.dataset.id);
   });
+}
 
-  // auto-load
-  loadIndex();
+/* ---------------- selection ---------------- */
+
+async function selectPreset(id) {
+  const base = normalizeBaseUrl(elBase.value);
+  selected = indexData.find(e => e.id === id);
+  selectedMeta = await fetch(base + selected.metaPath).then(r => r.json());
+
+  elSelTitle.textContent = selected.name;
+  placeholderValues = {};
+
+  buildPlaceholderForm();
+  buildAddonRewards();
+  rebuild();
+}
+
+function buildPlaceholderForm() {
+  const ph = selectedMeta.placeholders || {};
+  elForm.innerHTML = "";
+
+  for (const [k, spec] of Object.entries(ph)) {
+    const isMultiline = k === "commands" || k === "messages";
+    const el = document.createElement(isMultiline ? "textarea" : "input");
+    el.value = spec.default ?? "";
+    el.rows = isMultiline ? 4 : 1;
+    el.oninput = () => {
+      placeholderValues[k] = el.value;
+      rebuild();
+    };
+
+    placeholderValues[k] = el.value;
+
+    const wrap = document.createElement("label");
+    wrap.innerHTML = `<strong>${spec.label || k}</strong>`;
+    wrap.appendChild(el);
+    elForm.appendChild(wrap);
+  }
+}
+
+function buildAddonRewards() {
+  elAddRewards.innerHTML = rewardEntries.map(e =>
+    `<option value="${e.id}">${e.name}</option>`
+  ).join("");
+
+  elAddRewards.onchange = rebuild;
+}
+
+/* ---------------- build YAML ---------------- */
+
+async function loadFragments(meta) {
+  const base = normalizeBaseUrl(elBase.value);
+  const out = [];
+  for (const f of meta.fragments) {
+    const text = await fetch(base + f.path).then(r => r.text());
+    out.push({ mergeInto: f.mergeInto, text });
+  }
+  return out;
+}
+
+async function rebuild() {
+  if (!selectedMeta) return;
+
+  const base = normalizeBaseUrl(elBase.value);
+  let frags = [];
+
+  // main preset
+  const mainFrags = await loadFragments(selectedMeta);
+  frags.push(...mainFrags);
+
+  // reward add-ons
+  for (const opt of elAddRewards.selectedOptions) {
+    const meta = await fetch(base + rewardEntries.find(r => r.id === opt.value).metaPath).then(r => r.json());
+    frags.push(...await loadFragments(meta));
+  }
+
+  // derived blocks
+  const derived = { ...placeholderValues };
+  if (derived.commands) derived.commandsBlock = toYamlListBlock(derived.commands, 4);
+  if (derived.messages) derived.messagesBlock = toYamlListBlock(derived.messages, 4);
+
+  const grouped = {};
+  for (const f of frags) {
+    const filled = applyPlaceholders(f.text, derived).trim();
+    if (!grouped[f.mergeInto]) grouped[f.mergeInto] = [];
+    grouped[f.mergeInto].push(filled);
+  }
+
+  const out = [];
+  if (grouped.VoteSites) out.push(sectionWrap("VoteSites", grouped.VoteSites.join("\n\n")));
+  if (grouped.Rewards) out.push(sectionWrap("Rewards", grouped.Rewards.join("\n\n")));
+  if (grouped.VoteMilestones) out.push(sectionWrap("VoteMilestones", grouped.VoteMilestones.join("\n\n")));
+
+  elMerged.textContent = out.join("\n\n") || "Nothing to output.";
+  elCopy.disabled = false;
+}
+
+/* ---------------- copy ---------------- */
+
+elCopy.onclick = () => {
+  navigator.clipboard.writeText(elMerged.textContent);
+  elCopy.textContent = "Copied!";
+  setTimeout(() => elCopy.textContent = "Copy", 1000);
+};
+
+document.getElementById("reloadBtn").onclick = loadIndex;
+loadIndex();
 </script>
+
 </body>
 </html>
