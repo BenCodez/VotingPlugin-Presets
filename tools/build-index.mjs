@@ -96,17 +96,20 @@ function normalizeKeywords(keywords) {
  */
 function inferCategory(metaPath) {
   const p = metaPath.replaceAll("\\", "/");
+
+  // Most specific first
   if (p.includes("presets/votesites/")) return "votesites";
+  if (p.includes("presets/votemilestones/")) return "votemilestones"; // <- your folder name
   if (p.includes("presets/rewards/")) return "rewards";
-  if (p.includes("presets/votemilestones/")) return "votemilestones";
   if (p.includes("bundles/")) return "bundles";
+
   return "other";
 }
 
 /**
  * Extracts VotingPlugin ServiceSite identifier.
  *
- * Your confirmed meta shape:
+ * Confirmed meta shape:
  *   placeholders.serviceSite.default
  *
  * @param {any} meta
@@ -151,22 +154,27 @@ function toIndexEntry(meta, relMetaPath) {
 
   const verified = meta?.verified === true;
   const category = inferCategory(relMetaPath);
+  const isVoteSite = category === "votesites";
 
-  const serviceSite =
-    category === "votesites" ? extractServiceSite(meta) : null;
-
-  return {
+  // IMPORTANT: do not include serviceSite for non-votesites (omit the field entirely)
+  const entry = {
     id,
     category,
+    isvotesite: isVoteSite,
     name,
     description,
     keywords,
     domains,
-    serviceSite,
     metaPath: relMetaPath.replaceAll("\\", "/"),
     updatedAt,
     verified,
   };
+
+  if (isVoteSite) {
+    entry.serviceSite = extractServiceSite(meta);
+  }
+
+  return entry;
 }
 
 /**
@@ -221,6 +229,7 @@ function sortEntries(entries) {
       const entry = {
         id,
         category: "bundles",
+        isvotesite: false,
         name,
         description:
           typeof meta?.display?.description === "string"
@@ -228,10 +237,8 @@ function sortEntries(entries) {
             : "",
         keywords: normalizeKeywords(meta?.keywords),
         domains: [],
-        serviceSite: null,
         metaPath: rel.replaceAll("\\", "/"),
-        updatedAt:
-          typeof meta?.updatedAt === "string" ? meta.updatedAt : null,
+        updatedAt: typeof meta?.updatedAt === "string" ? meta.updatedAt : null,
         verified: meta?.verified === true,
       };
 
