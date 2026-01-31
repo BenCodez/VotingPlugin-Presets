@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-01-31T00:00:00Z",
+  "entries": [
+    {
+      "id": "votesite:pmc",
+      "category": "votesites",
+      "name": "PlanetMinecraft (generic)",
+      "description": "Generic PlanetMinecraft VoteSite entry. VoteURL can be added later via search or manual edit.",
+      "keywords": ["pmc", "planet minecraft"],
+      "domains": ["planetminecraft.com", "www.planetminecraft.com"],
+      "metaPath": "presets/votesites/pmc.meta.json",
+      "updatedAt": "2026-01-31T00:00:00Z",
+      "verified": true
+    }
+  ]
+}
