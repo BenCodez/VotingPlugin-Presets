@@ -20,7 +20,7 @@
     "siteKey": {
       "type": "string",
       "label": "VoteSite key",
-      "default": "minestatus.net"
+      "default": "minestatus_net"
     },
     "displayName": {
       "type": "string",

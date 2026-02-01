@@ -20,7 +20,7 @@
     "siteKey": {
       "type": "string",
       "label": "VoteSite key",
-      "default": "BestServers.com"
+      "default": "BestServers_com"
     },
     "displayName": {
       "type": "string",

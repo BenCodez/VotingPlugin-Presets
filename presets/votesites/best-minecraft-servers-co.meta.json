@@ -21,7 +21,7 @@
     "siteKey": {
       "type": "string",
       "label": "VoteSite key",
-      "default": "Best Minecraft Servers"
+      "default": "BestMinecraftServers"
     },
     "displayName": {
       "type": "string",

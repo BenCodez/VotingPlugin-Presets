@@ -22,7 +22,7 @@
     "siteKey": {
       "type": "string",
       "label": "VoteSite key",
-      "default": "play-minecraft-servers.com"
+      "default": "play-minecraft-servers_com"
     },
     "displayName": {
       "type": "string",

@@ -19,7 +19,7 @@
     "siteKey": {
       "type": "string",
       "label": "VoteSite key",
-      "default": "crafty.gg"
+      "default": "crafty_gg"
     },
     "displayName": {
       "type": "string",

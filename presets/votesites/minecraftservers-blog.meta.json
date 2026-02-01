@@ -20,7 +20,7 @@
     "siteKey": {
       "type": "string",
       "label": "VoteSite key",
-      "default": "minecraftservers.blog"
+      "default": "minecraftservers_blog"
     },
     "displayName": {
       "type": "string",

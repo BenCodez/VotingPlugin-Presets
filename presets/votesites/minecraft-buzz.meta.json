@@ -20,7 +20,7 @@
     "siteKey": {
       "type": "string",
       "label": "VoteSite key",
-      "default": "Minecraft.Buzz"
+      "default": "Minecraft_Buzz"
     },
     "displayName": {
       "type": "string",

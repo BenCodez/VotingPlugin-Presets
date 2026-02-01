@@ -21,7 +21,7 @@
     "siteKey": {
       "type": "string",
       "label": "VoteSite key",
-      "default": "Minecraft-Server.net"
+      "default": "Minecraft-Server_net"
     },
     "displayName": {
       "type": "string",

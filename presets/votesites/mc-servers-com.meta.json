@@ -20,7 +20,7 @@
     "siteKey": {
       "type": "string",
       "label": "VoteSite key",
-      "default": "MC-Servers.com"
+      "default": "MC-Servers_com"
     },
     "displayName": {
       "type": "string",

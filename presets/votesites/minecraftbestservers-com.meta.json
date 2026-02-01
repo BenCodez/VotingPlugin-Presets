@@ -20,7 +20,7 @@
     "siteKey": {
       "type": "string",
       "label": "VoteSite key",
-      "default": "Minecraft Server List"
+      "default": "MinecraftServerList"
     },
     "displayName": {
       "type": "string",

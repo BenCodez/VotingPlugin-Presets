@@ -20,7 +20,7 @@
     "siteKey": {
       "type": "string",
       "label": "VoteSite key",
-      "default": "PlanetMinecraft.com"
+      "default": "PlanetMinecraft_com"
     },
     "displayName": {
       "type": "string",

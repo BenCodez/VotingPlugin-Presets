@@ -20,7 +20,7 @@
     "siteKey": {
       "type": "string",
       "label": "VoteSite key",
-      "default": "Minecraft-MP.com"
+      "default": "Minecraft-MP_com"
     },
     "displayName": {
       "type": "string",
