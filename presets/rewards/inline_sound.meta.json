@@ -1,0 +1,40 @@
+{
+	"schemaVersion": 1,
+	"id": "reward:inline:sound",
+	"display": {
+		"name": "Inline Reward: Sound",
+		"description": "Adds a Sound reward under VoteSites.<siteKey>.Rewards."
+	},
+	"match": {
+		"keywords": [
+			"reward",
+			"inline",
+			"sound"
+		]
+	},
+	"placeholders": {
+		"sound": {
+			"type": "string",
+			"label": "Sound (Minecraft sound name)",
+			"default": "entity.player.levelup",
+			"example": "minecraft:entity.experience_orb.pickup"
+		},
+		"volume": {
+			"type": "string",
+			"label": "Volume (0.0-1.0)",
+			"default": "1.0"
+		},
+		"pitch": {
+			"type": "string",
+			"label": "Pitch (0.5-2.0)",
+			"default": "1.0"
+		}
+	},
+	"fragments": [
+		{
+			"path": "presets/rewards/inline_sound.rewardblock.yml",
+			"mergeInto": "VoteSites.<siteKey>.Rewards"
+		}
+	],
+	"verified": true
+}

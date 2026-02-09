@@ -1,0 +1,5 @@
+Sound:
+  Enabled: true
+  Sound: <sound>
+  Volume: <volume>
+  Pitch: <pitch>

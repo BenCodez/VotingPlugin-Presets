@@ -1,0 +1,35 @@
+{
+	"schemaVersion": 1,
+	"id": "reward:inline:actionbar",
+	"display": {
+		"name": "Inline Reward: ActionBar",
+		"description": "Adds an ActionBar message under VoteSites.<siteKey>.Rewards."
+	},
+	"match": {
+		"keywords": [
+			"reward",
+			"inline",
+			"actionbar"
+		]
+	},
+	"placeholders": {
+		"actionBar": {
+			"type": "string",
+			"label": "ActionBar Message",
+			"default": "&bVoting reward delivered",
+			"example": "&eVote successful!"
+		},
+		"delay": {
+			"type": "string",
+			"label": "ActionBar Delay (ticks)",
+			"default": "0"
+		}
+	},
+	"fragments": [
+		{
+			"path": "presets/rewards/inline_actionbar.rewardblock.yml",
+			"mergeInto": "VoteSites.<siteKey>.Rewards"
+		}
+	],
+	"verified": true
+}

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "reward:inline:items",
+  "display": {
+    "name": "Inline Reward: Items only",
+    "description": "Adds Items under VoteSites.<siteKey>.Rewards."
+  },
+  "match": {
+    "keywords": ["reward", "inline", "items"]
+  },
+  "placeholders": {
+    "itemsBlock": {
+      "type": "string",
+      "label": "Items (YAML map under Items:)",
+      "default": "Diamond:\n  Material: DIAMOND\n  Amount: 1",
+      "example": "Diamond:\n  Material: DIAMOND\n  Amount: 2\nIron:\n  Material: IRON_INGOT\n  Amount: 8"
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/rewards/inline_items.rewardblock.yml",
+      "mergeInto": "VoteSites.<siteKey>.Rewards"
+    }
+  ],
+  "verified": true
+}
