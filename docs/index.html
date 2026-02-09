@@ -5,26 +5,207 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>VotingPlugin Presets (Local Scanner)</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 18px; }
+    :root {
+      color-scheme: light dark;
+
+      --bg: #ffffff;
+      --text: #111111;
+      --muted: #666666;
+      --card: #ffffff;
+      --border: #e6e6e6;
+      --border2: #eeeeee;
+      --thbg: #fafafa;
+
+      --prebg: #0b1020;
+      --pretext: #d6e1ff;
+
+      --btnbg: #f5f5f5;
+      --btntext: #111111;
+      --btnborder: #d8d8d8;
+
+      --focus: rgba(80, 140, 255, 0.25);
+      --hintbg: rgba(0,0,0,0.03);
+    }
+
+    /* Dark mode (auto) */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0c0f14;
+        --text: #e8e8e8;
+        --muted: #a7a7a7;
+        --card: #121826;
+        --border: #243044;
+        --border2: #1f2a3a;
+        --thbg: #0f1522;
+
+        --prebg: #060913;
+        --pretext: #d6e1ff;
+
+        --btnbg: #151d2b;
+        --btntext: #e8e8e8;
+        --btnborder: #2a3a55;
+
+        --focus: rgba(120, 170, 255, 0.30);
+        --hintbg: rgba(255,255,255,0.05);
+      }
+    }
+
+    /* Manual theme override (optional toggle) */
+    html[data-theme="light"] {
+      color-scheme: light;
+      --bg: #ffffff;
+      --text: #111111;
+      --muted: #666666;
+      --card: #ffffff;
+      --border: #e6e6e6;
+      --border2: #eeeeee;
+      --thbg: #fafafa;
+      --prebg: #0b1020;
+      --pretext: #d6e1ff;
+      --btnbg: #f5f5f5;
+      --btntext: #111111;
+      --btnborder: #d8d8d8;
+      --focus: rgba(80, 140, 255, 0.25);
+      --hintbg: rgba(0,0,0,0.03);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0c0f14;
+      --text: #e8e8e8;
+      --muted: #a7a7a7;
+      --card: #121826;
+      --border: #243044;
+      --border2: #1f2a3a;
+      --thbg: #0f1522;
+      --prebg: #060913;
+      --pretext: #d6e1ff;
+      --btnbg: #151d2b;
+      --btntext: #e8e8e8;
+      --btnborder: #2a3a55;
+      --focus: rgba(120, 170, 255, 0.30);
+      --hintbg: rgba(255,255,255,0.05);
+    }
+
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      margin: 18px;
+      background: var(--bg);
+      color: var(--text);
+    }
+
     header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    input, select, button, textarea { padding: 8px 10px; font-size: 14px; }
-    textarea { resize: vertical; width: 100%; min-height: 58px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+
+    input, select, button, textarea {
+      padding: 8px 10px;
+      font-size: 14px;
+      border: 1px solid var(--btnborder);
+      background: var(--btnbg);
+      color: var(--btntext);
+      border-radius: 10px;
+      outline: none;
+    }
+
+    input, textarea { background: transparent; color: var(--text); border: 1px solid var(--border); }
+
+    textarea {
+      resize: vertical;
+      width: 100%;
+      min-height: 58px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
     button { cursor: pointer; }
-    .muted { color:#666; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    input:focus, select:focus, button:focus, textarea:focus {
+      box-shadow: 0 0 0 4px var(--focus);
+    }
+
+    .muted { color: var(--muted); }
     .error { color:#b00020; white-space:pre-wrap; }
+
     .layout { display:grid; grid-template-columns: 1.1fr 1fr; gap:14px; margin-top:14px; }
-    .card { border:1px solid #e6e6e6; border-radius:12px; padding:12px; background:#fff; }
+
+    .card {
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:12px;
+      background: var(--card);
+    }
+
     .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .pill { display:inline-block; padding:2px 8px; border:1px solid #ddd; border-radius:999px; font-size:12px; }
-    pre { background:#0b1020; color:#d6e1ff; padding:12px; border-radius:10px; overflow:auto; max-height:520px; white-space:pre; }
+
+    .pill {
+      display:inline-block;
+      padding:2px 8px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      font-size:12px;
+    }
+
+    pre {
+      background: var(--prebg);
+      color: var(--pretext);
+      padding:12px;
+      border-radius:10px;
+      overflow:auto;
+      max-height:520px;
+      white-space:pre;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
     table { width:100%; border-collapse: collapse; }
-    th, td { border-bottom:1px solid #eee; padding:8px; text-align:left; vertical-align:top; }
-    th { background:#fafafa; position: sticky; top: 0; }
+    th, td { border-bottom:1px solid var(--border2); padding:8px; text-align:left; vertical-align:top; }
+    th { background: var(--thbg); position: sticky; top: 0; }
+
     .split { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
     .list { max-height:420px; overflow:auto; }
+
     label { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
-    .hint { font-size:12px; color:#666; margin-top:4px; }
+
+    .hint { font-size:12px; color: var(--muted); margin-top:4px; }
     .small { font-size:12px; }
+
+    /* More obvious multi-select hint */
+    .selectHintBox {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px dashed var(--border);
+      background: var(--hintbg);
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+    }
+
+    .kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      padding: 2px 6px;
+      border: 1px solid var(--border);
+      border-bottom-width: 2px;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .themeBtn {
+      margin-left: auto;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    /* Locked/read-only display */
+    .readonlyField {
+      background: rgba(127,127,127,0.08);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 14px;
+      user-select: text;
+    }
   </style>
 </head>
 <body>
@@ -33,6 +214,12 @@
   <h2 style="margin:0;">VotingPlugin Presets</h2>
   <button id="pickFolderBtn" onclick="onPickFolderClick(event)">Pick Folder</button>
   <button id="reloadBtn">Reload</button>
+
+  <!-- Optional manual theme toggle -->
+  <span class="themeBtn">
+    <button id="themeToggleBtn" type="button" title="Toggle theme (auto / light / dark)">Theme</button>
+  </span>
+
   <span id="status" class="muted"></span>
 </header>
 
@@ -47,7 +234,6 @@
     } catch {}
   })();
 </script>
-
 
 <div class="row" style="margin-top:10px;">
   <input id="q" size="34" placeholder="Search presets..." />
@@ -90,7 +276,7 @@
       <button id="copyBtn" disabled>Copy</button>
     </div>
 
-    <hr style="border:none;border-top:1px solid #eee;margin:10px 0;" />
+    <hr style="border:none;border-top:1px solid var(--border2);margin:10px 0;" />
 
     <div class="split">
       <div>
@@ -101,6 +287,20 @@
       <div>
         <div class="pill">Reward add-ons</div>
         <div class="hint" id="rewardHint">Pick a base preset first.</div>
+
+        <!-- Obvious multi-select hint + tooltip -->
+        <div id="rewardSelectHint" class="selectHintBox"
+             title="Multi-select: hold Ctrl (Windows/Linux) or ⌘ (Mac) to select multiple. Shift selects a range.">
+          <div style="flex:1;">
+            <div style="font-weight:600; font-size:12px;">Tip: Select multiple rewards</div>
+            <div class="small muted" style="margin-top:4px;">
+              Hold <span class="kbd">Ctrl</span> (or <span class="kbd">⌘</span> on Mac) to pick multiple.
+              Use <span class="kbd">Shift</span> for a range.
+              <span id="rewardSelectedCount" class="pill" style="margin-left:6px;">0 selected</span>
+            </div>
+          </div>
+        </div>
+
         <select id="addonRewards" multiple size="7" style="width:100%; margin-top:8px;"></select>
         <div id="rewardForms"></div>
       </div>
@@ -114,6 +314,40 @@
 <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
 
 <script>
+/**
+ * Theme toggle (auto -> light -> dark -> auto)
+ */
+(function themeInit() {
+  const KEY = "vp_theme";
+  const btn = document.getElementById("themeToggleBtn");
+
+  function apply(mode) {
+    if (!mode || mode === "auto") {
+      document.documentElement.removeAttribute("data-theme");
+      btn.textContent = "Theme: Auto";
+      return;
+    }
+    document.documentElement.setAttribute("data-theme", mode);
+    btn.textContent = "Theme: " + (mode.charAt(0).toUpperCase() + mode.slice(1));
+  }
+
+  function next(mode) {
+    if (!mode || mode === "auto") return "light";
+    if (mode === "light") return "dark";
+    return "auto";
+  }
+
+  let mode = "auto";
+  try { mode = localStorage.getItem(KEY) || "auto"; } catch { mode = "auto"; }
+  apply(mode);
+
+  btn.addEventListener("click", () => {
+    mode = next(mode);
+    try { localStorage.setItem(KEY, mode); } catch {}
+    apply(mode);
+  });
+})();
+
 /**
  * Global root directory handle for local mode.
  * Kept on window so it survives if code reloads.
@@ -138,6 +372,8 @@ const elCount = document.getElementById("count");
 const elQ = document.getElementById("q");
 const elCat = document.getElementById("cat");
 const elRewardHint = document.getElementById("rewardHint");
+const elRewardSelectedCount = document.getElementById("rewardSelectedCount");
+const elRewardSelectHint = document.getElementById("rewardSelectHint");
 
 let indexData = [];
 let rewardEntries = [];
@@ -152,6 +388,11 @@ const rewardMetaById = {};
 /** per-id placeholder values */
 let baseValues = {};
 let rewardValuesById = {};
+
+function updateRewardSelectedCount() {
+  const n = elAddRewards?.selectedOptions ? elAddRewards.selectedOptions.length : 0;
+  if (elRewardSelectedCount) elRewardSelectedCount.textContent = `${n} selected`;
+}
 
 /**
  * Pick folder click handler (inline onclick).
@@ -335,6 +576,8 @@ function escapeHtml(s) {
 
 /**
  * Build placeholder form for a meta.
+ * HARD-LOCKS serviceSite so it can never be changed.
+ *
  * @param {HTMLElement} container
  * @param {Object} placeholders
  * @param {Object} valuesObj
@@ -353,6 +596,26 @@ function buildForm(container, placeholders, valuesObj, onChange) {
 
     const type = String(def.type || "").toLowerCase();
     const isTriggerType = key === "triggerType";
+    const isServiceSite = String(key).toLowerCase() === "servicesite";
+
+    // --- LOCK serviceSite (no editing) ---
+    if (isServiceSite) {
+      const tooltip = "Service site is locked (set by the preset). Do not change this value.";
+      const current = valuesObj[key] ?? def.default ?? "";
+
+      // Persist once so placeholder replacement still works
+      if (valuesObj[key] == null) valuesObj[key] = current;
+
+      const ro = document.createElement("div");
+      ro.className = "readonlyField";
+      ro.textContent = current ? String(current) : "—";
+      ro.title = tooltip;
+      lab.title = tooltip;
+
+      lab.appendChild(ro);
+      container.appendChild(lab);
+      continue;
+    }
 
     // ENUM dropdown support
     const enumValues = Array.isArray(def.values) ? def.values : (isTriggerType ? ["AT", "EVERY"] : null);
@@ -424,9 +687,13 @@ async function selectPreset(id) {
   elAddRewards.disabled = !rewardsSupported;
   elAddRewards.innerHTML = rewardEntries.map(e => `<option value="${escapeHtml(e.id)}">${escapeHtml(e.name)}</option>`).join("");
   elAddRewards.onchange = () => {
+    updateRewardSelectedCount();
     rebuildRewardForms();
     rebuild();
   };
+
+  // Show/hide the multi-select hint depending on support
+  if (elRewardSelectHint) elRewardSelectHint.style.display = rewardsSupported ? "" : "none";
 
   elRewardHint.textContent = rewardsSupported
     ? (entry.category === "votemilestones"
@@ -434,6 +701,7 @@ async function selectPreset(id) {
         : "Rewards merge into VoteSites.<siteKey>.Rewards")
     : "Rewards not supported for this preset type.";
 
+  updateRewardSelectedCount();
   rebuildRewardForms();
   await rebuild();
 }
@@ -446,7 +714,7 @@ function rebuildRewardForms() {
     if (!meta) continue;
     rewardValuesById[rid] = rewardValuesById[rid] || {};
     const box = document.createElement("div");
-    box.style.border = "1px solid #eee";
+    box.style.border = "1px solid var(--border2)";
     box.style.borderRadius = "10px";
     box.style.padding = "10px";
     box.style.marginTop = "10px";
@@ -457,11 +725,6 @@ function rebuildRewardForms() {
     elRewardForms.appendChild(box);
   }
 }
-
-/**
- * Parses YAML fragment; returns {} if blank.
- * @param {string} yml
- */
 
 /**
  * Converts a multiline textarea (one per line) into an indented YAML list block.
@@ -548,12 +811,10 @@ function applyPlaceholders(text, values) {
     const v = String(raw ?? "");
 
     if (!v.includes("\n")) {
-      // Simple global replacement for single-line values (works for mergeInto paths too).
       out = out.split(token).join(v);
       continue;
     }
 
-    // Indent-aware replacement for multiline values (YAML blocks).
     const reToken = new RegExp(`(^[\\t ]*)${token.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}`, "gm");
     out = out.replace(reToken, (match, indent) => {
       const lines = v.split(/\r?\n/);
@@ -563,7 +824,6 @@ function applyPlaceholders(text, values) {
     });
   }
 
-  // Remove leftover placeholder-only lines
   out = out.replace(/^[ \t]*<[^>\n]+>[ \t]*\r?\n/gm, "");
   return out;
 }
@@ -669,7 +929,6 @@ async function rebuild() {
 
       const rVals = rewardValuesById[rid] || {};
       const derived = { ...rVals };
-      // Common reward presets use <commandsBlock> / <messagesBlock> placeholders.
       if (derived.commands != null) derived.commandsBlock = toYamlListBlock(derived.commands, 2);
       if (derived.messages != null) derived.messagesBlock = toYamlListBlock(derived.messages, 2);
       const mergedVals = { ...baseValues, ...derived };
@@ -699,6 +958,7 @@ async function rebuild() {
 document.getElementById("reloadBtn").addEventListener("click", () => loadIndex());
 elQ.addEventListener("input", renderIndex);
 elCat.addEventListener("change", renderIndex);
+elAddRewards.addEventListener("change", updateRewardSelectedCount);
 
 elCopy.addEventListener("click", async () => {
   try {
