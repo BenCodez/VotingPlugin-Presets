@@ -127,7 +127,7 @@ function main() {
     const siteKey = (fields["VoteSite key (siteKey)"] || "").trim();
     const displayName = (fields["Display name (displayName)"] || "").trim();
     const serviceSite = (fields["ServiceSite (required)"] || "").trim();
-    const voteUrlDefault = (fields["Default VoteURL placeholder"] || "").trim() || "ADD_VOTE_URL_LATER";
+    const voteUrlDefault = (fields["Default VoteURL placeholder"] || "").trim() || "VOTEURL";
 
     const voteDelay = (fields["VoteDelay (optional)"] || "").trim();
     const waitUntil = (fields["WaitUntilVoteDelay (optional)"] || "").trim();
