@@ -64,8 +64,8 @@ body:
     id: vote_url_default
     attributes:
       label: "Default VoteURL placeholder"
-      description: "Suggestion: ADD_VOTE_URL_LATER"
-      placeholder: "ADD_VOTE_URL_LATER"
+      description: "Suggestion: VOTEURL"
+      placeholder: "VOTEURL"
     validations:
       required: true
 

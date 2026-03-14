@@ -34,7 +34,7 @@
     "voteURL": {
       "type": "string",
       "label": "VoteURL",
-      "default": "ADD_VOTE_URL_LATER"
+      "default": "VOTEURL"
     },
     "voteDelay": {
       "type": "string",
