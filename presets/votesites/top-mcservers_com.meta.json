@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "id": "votesite:top-mcservers",
+  "display": {
+    "name": "Top MC Servers (generic)",
+    "description": "Generic Top MC Servers VoteSite preset."
+  },
+  "match": {
+    "domains": [
+      "top-mcservers.com",
+      "_no response_"
+    ],
+    "keywords": [
+      "top-mcservers",
+      "top mc servers"
+    ]
+  },
+  "placeholders": {
+    "siteKey": {
+      "type": "string",
+      "label": "VoteSite key",
+      "default": "top-mcservers"
+    },
+    "displayName": {
+      "type": "string",
+      "label": "VoteSite display name",
+      "default": "Top MC Servers"
+    },
+    "serviceSite": {
+      "type": "string",
+      "label": "ServiceSite",
+      "default": "TOPMCSERVERS"
+    },
+    "voteURL": {
+      "type": "string",
+      "label": "Vote URL",
+      "default": "VOTEURL"
+    },
+    "voteDelay": {
+      "type": "string",
+      "label": "VoteDelay (blank = omit)",
+      "default": "_No response_"
+    },
+    "waitUntilVoteDelay": {
+      "type": "string",
+      "label": "WaitUntilVoteDelay (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDaily": {
+      "type": "string",
+      "label": "VoteDelayDaily (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDailyHour": {
+      "type": "string",
+      "label": "VoteDelayDailyHour (0–23, blank = omit)",
+      "default": ""
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/votesites/generic.votesites.yml",
+      "mergeInto": "VoteSites"
+    }
+  ],
+  "verified": false
+}
