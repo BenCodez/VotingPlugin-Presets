@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "id": "votesite:voxelrank-com",
+  "display": {
+    "name": "VoxelRank.com (generic)",
+    "description": "Generic VoxelRank.com VoteSite preset."
+  },
+  "match": {
+    "domains": [
+      "voxelrank.com"
+    ],
+    "keywords": [
+      "voxelrank_com",
+      "voxelrank.com"
+    ]
+  },
+  "placeholders": {
+    "siteKey": {
+      "type": "string",
+      "label": "VoteSite key",
+      "default": "VoxelRank_com"
+    },
+    "displayName": {
+      "type": "string",
+      "label": "VoteSite display name",
+      "default": "VoxelRank.com"
+    },
+    "serviceSite": {
+      "type": "string",
+      "label": "ServiceSite",
+      "default": "VoxelRank.com"
+    },
+    "voteURL": {
+      "type": "string",
+      "label": "Vote URL",
+      "default": "VOTEURL"
+    },
+    "voteDelay": {
+      "type": "string",
+      "label": "VoteDelay (blank = omit)",
+      "default": "24h"
+    },
+    "waitUntilVoteDelay": {
+      "type": "string",
+      "label": "WaitUntilVoteDelay (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDaily": {
+      "type": "string",
+      "label": "VoteDelayDaily (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDailyHour": {
+      "type": "string",
+      "label": "VoteDelayDailyHour (0–23, blank = omit)",
+      "default": ""
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/votesites/generic.votesites.yml",
+      "mergeInto": "VoteSites"
+    }
+  ],
+  "verified": false
+}
