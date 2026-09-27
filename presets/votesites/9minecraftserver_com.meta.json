@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "id": "votesite:9minecraftserver-com",
+  "display": {
+    "name": "9MinecraftServer (generic)",
+    "description": "Generic 9MinecraftServer VoteSite preset."
+  },
+  "match": {
+    "domains": [
+      "9minecraftserver.com"
+    ],
+    "keywords": [
+      "nineminecraftserver",
+      "9minecraftserver"
+    ]
+  },
+  "placeholders": {
+    "siteKey": {
+      "type": "string",
+      "label": "VoteSite key",
+      "default": "NineMinecraftServer"
+    },
+    "displayName": {
+      "type": "string",
+      "label": "VoteSite display name",
+      "default": "9MinecraftServer"
+    },
+    "serviceSite": {
+      "type": "string",
+      "label": "ServiceSite",
+      "default": "9minecraftserver.com"
+    },
+    "voteURL": {
+      "type": "string",
+      "label": "Vote URL",
+      "default": "VOTEURL"
+    },
+    "voteDelay": {
+      "type": "string",
+      "label": "VoteDelay (blank = omit)",
+      "default": "24h"
+    },
+    "waitUntilVoteDelay": {
+      "type": "string",
+      "label": "WaitUntilVoteDelay (true/false, blank = omit)",
+      "default": "false"
+    },
+    "voteDelayDaily": {
+      "type": "string",
+      "label": "VoteDelayDaily (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDailyHour": {
+      "type": "string",
+      "label": "VoteDelayDailyHour (0–23, blank = omit)",
+      "default": ""
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/votesites/generic.votesites.yml",
+      "mergeInto": "VoteSites"
+    }
+  ],
+  "verified": false
+}
