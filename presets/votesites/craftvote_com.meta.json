@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "id": "votesite:craftvote",
+  "display": {
+    "name": "CraftVote (generic)",
+    "description": "Generic CraftVote VoteSite preset."
+  },
+  "match": {
+    "domains": [
+      "craftvote.com",
+      "_no response_"
+    ],
+    "keywords": [
+      "craftvote",
+      "craftvote"
+    ]
+  },
+  "placeholders": {
+    "siteKey": {
+      "type": "string",
+      "label": "VoteSite key",
+      "default": "craftvote"
+    },
+    "displayName": {
+      "type": "string",
+      "label": "VoteSite display name",
+      "default": "CraftVote"
+    },
+    "serviceSite": {
+      "type": "string",
+      "label": "ServiceSite",
+      "default": "CraftVote"
+    },
+    "voteURL": {
+      "type": "string",
+      "label": "Vote URL",
+      "default": "VOTEURL"
+    },
+    "voteDelay": {
+      "type": "string",
+      "label": "VoteDelay (blank = omit)",
+      "default": "_No response_"
+    },
+    "waitUntilVoteDelay": {
+      "type": "string",
+      "label": "WaitUntilVoteDelay (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDaily": {
+      "type": "string",
+      "label": "VoteDelayDaily (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDailyHour": {
+      "type": "string",
+      "label": "VoteDelayDailyHour (0–23, blank = omit)",
+      "default": ""
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/votesites/generic.votesites.yml",
+      "mergeInto": "VoteSites"
+    }
+  ],
+  "verified": false
+}
