@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "id": "votesite:RadarMC",
+  "display": {
+    "name": "RadarMC (generic)",
+    "description": "Generic RadarMC VoteSite preset."
+  },
+  "match": {
+    "domains": [
+      "radarmc.org",
+      "_no response_"
+    ],
+    "keywords": [
+      "radarmc",
+      "radarmc"
+    ]
+  },
+  "placeholders": {
+    "siteKey": {
+      "type": "string",
+      "label": "VoteSite key",
+      "default": "RadarMC"
+    },
+    "displayName": {
+      "type": "string",
+      "label": "VoteSite display name",
+      "default": "RadarMC"
+    },
+    "serviceSite": {
+      "type": "string",
+      "label": "ServiceSite",
+      "default": "RadarMC"
+    },
+    "voteURL": {
+      "type": "string",
+      "label": "Vote URL",
+      "default": "https://radarmc.org/servers/your-server"
+    },
+    "voteDelay": {
+      "type": "string",
+      "label": "VoteDelay (blank = omit)",
+      "default": "_No response_"
+    },
+    "waitUntilVoteDelay": {
+      "type": "string",
+      "label": "WaitUntilVoteDelay (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDaily": {
+      "type": "string",
+      "label": "VoteDelayDaily (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDailyHour": {
+      "type": "string",
+      "label": "VoteDelayDailyHour (0–23, blank = omit)",
+      "default": ""
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/votesites/generic.votesites.yml",
+      "mergeInto": "VoteSites"
+    }
+  ],
+  "verified": false
+}
