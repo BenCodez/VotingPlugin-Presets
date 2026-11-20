@@ -65,7 +65,8 @@ function parseIssueForm(body) {
 
   // GitHub issue forms sometimes include "No response" for empty fields.
   for (const k of Object.keys(out)) {
-    if (out[k].trim().toLowerCase() === "no response") out[k] = "";
+    const value = out[k].toLowerCase();
+    if (value === "no response" || value === "_no response_") out[k] = "";
   }
   return out;
 }
