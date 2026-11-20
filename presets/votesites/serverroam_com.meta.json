@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "id": "votesite:serverroam-com",
+  "display": {
+    "name": "ServerRoam (generic)",
+    "description": "Generic ServerRoam VoteSite preset."
+  },
+  "match": {
+    "domains": [
+      "serverroam.com",
+      "_no response_"
+    ],
+    "keywords": [
+      "serverroam",
+      "serverroam"
+    ]
+  },
+  "placeholders": {
+    "siteKey": {
+      "type": "string",
+      "label": "VoteSite key",
+      "default": "ServerRoam"
+    },
+    "displayName": {
+      "type": "string",
+      "label": "VoteSite display name",
+      "default": "ServerRoam"
+    },
+    "serviceSite": {
+      "type": "string",
+      "label": "ServiceSite",
+      "default": "ServerRoam"
+    },
+    "voteURL": {
+      "type": "string",
+      "label": "Vote URL",
+      "default": "https://serverroam.com/minecraft/your-server"
+    },
+    "voteDelay": {
+      "type": "string",
+      "label": "VoteDelay (blank = omit)",
+      "default": "_No response_"
+    },
+    "waitUntilVoteDelay": {
+      "type": "string",
+      "label": "WaitUntilVoteDelay (true/false, blank = omit)",
+      "default": ""
+    },
+    "voteDelayDaily": {
+      "type": "string",
+      "label": "VoteDelayDaily (true/false, blank = omit)",
+      "default": "true"
+    },
+    "voteDelayDailyHour": {
+      "type": "string",
+      "label": "VoteDelayDailyHour (0–23, blank = omit)",
+      "default": ""
+    }
+  },
+  "fragments": [
+    {
+      "path": "presets/votesites/generic.votesites.yml",
+      "mergeInto": "VoteSites"
+    }
+  ],
+  "verified": false
+}
